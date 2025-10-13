@@ -50,6 +50,7 @@ interface MapComponentProps {
   activeLayers: Set<MapLayerId>;
   onFeatureClick: (feature: any) => void;
   onMapLoad: (map: MapRef) => void;
+  mapMode: 'Live' | 'Mood';
 }
 
 const severityColorMap = {
@@ -94,6 +95,7 @@ export function MapComponent({
   activeLayers,
   onFeatureClick,
   onMapLoad,
+  mapMode,
 }: MapComponentProps) {
   const mapRef = React.useRef<MapRef>(null);
   const [debugInfo, setDebugInfo] = React.useState<string>("");
@@ -355,6 +357,61 @@ export function MapComponent({
     }
   };
 
+  // Effect to update layers when mode changes
+  React.useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+
+    const shouldShowTraffic = mapMode === 'Live';
+    
+    // Clean up existing traffic layers
+    if (map.getLayer("mapbox-traffic-layer")) {
+      map.removeLayer("mapbox-traffic-layer");
+    }
+    if (map.getSource("mapbox-traffic")) {
+      map.removeSource("mapbox-traffic");
+    }
+
+    // Add traffic layers if in Live mode
+    if (shouldShowTraffic) {
+      try {
+        map.addSource("mapbox-traffic", {
+          type: "vector",
+          url: "mapbox://mapbox.mapbox-traffic-v1",
+        } as any);
+
+        map.addLayer({
+          id: "mapbox-traffic-layer",
+          type: "line",
+          source: "mapbox-traffic",
+          "source-layer": "traffic",
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+          },
+          paint: {
+            "line-color": [
+              "match",
+              ["get", "congestion"],
+              "low",
+              "#28a745",
+              "moderate",
+              "#ffc107",
+              "heavy",
+              "#fd7e14",
+              "severe",
+              "#dc3545",
+              "#cccccc",
+            ],
+            "line-width": 3,
+          },
+        } as any);
+      } catch (err) {
+        console.warn("Error setting up Mapbox traffic layer:", err);
+      }
+    }
+  }, [mapMode]);
+
   const onInternalLoad = () => {
     console.log("Map loaded!");
     const map = mapRef.current?.getMap();
@@ -362,59 +419,12 @@ export function MapComponent({
       onMapLoad(mapRef.current!);
       console.log("Map reference passed to parent");
 
-      // Setup Mapbox vector tiles traffic
-      try {
-        if (activeLayers.has("traffic")) {
-          if (!map.getSource("mapbox-traffic")) {
-            map.addSource("mapbox-traffic", {
-              type: "vector",
-              url: "mapbox://mapbox.mapbox-traffic-v1",
-            } as any);
-          }
-
-          if (!map.getLayer("mapbox-traffic-layer")) {
-            map.addLayer({
-              id: "mapbox-traffic-layer",
-              type: "line",
-              source: "mapbox-traffic",
-              "source-layer": "traffic",
-              layout: {
-                "line-join": "round",
-                "line-cap": "round",
-              },
-              paint: {
-                "line-color": [
-                  "match",
-                  ["get", "congestion"],
-                  "low",
-                  "#28a745",
-                  "moderate",
-                  "#ffc107",
-                  "heavy",
-                  "#fd7e14",
-                  "severe",
-                  "#dc3545",
-                  "#cccccc",
-                ],
-                "line-width": 3,
-              },
-            } as any);
-          }
-        } else {
-          if (map.getLayer("mapbox-traffic-layer")) {
-            map.removeLayer("mapbox-traffic-layer");
-          }
-          if (map.getSource("mapbox-traffic")) {
-            map.removeSource("mapbox-traffic");
-          }
-        }
-      } catch (err) {
-        console.warn("Error setting up Mapbox traffic layer:", err);
-      }
+      // Initial map setup is now handled by the mapMode effect
     }
   };
 
-  const showSentimentLayer = activeLayers.has("sentiment");
+  const showSentimentLayer = activeLayers.has("sentiment") && mapMode === 'Mood';
+  const showTrafficLayer = activeLayers.has("traffic") && mapMode === 'Live';
   const hasValidPolygons = areaMoodsGeoJSON.features.length > 0;
 
   return (
@@ -561,7 +571,7 @@ export function MapComponent({
         )}
 
         {/* Traffic Layer */}
-        {activeLayers.has("traffic") && (
+        {showTrafficLayer && (
           <Source id="traffic" type="geojson" data={trafficSource}>
             <Layer
               id="traffic-lines"
@@ -658,34 +668,7 @@ export function MapComponent({
         )}
       </Map>
 
-      {/* Debug overlay */}
-      <div className="absolute top-4 left-4 bg-black/80 text-white p-3 rounded text-xs font-mono max-w-sm z-10">
-        <div className="font-bold mb-1">Debug Info:</div>
-        <div>{debugInfo}</div>
-        <div>Sentiment layer: {showSentimentLayer ? "ON" : "OFF"}</div>
-        <div>Valid polygons: {areaMoodsGeoJSON.features.length}</div>
-        <div className="mt-2">
-          <div className="font-bold">Sentiments:</div>
-          {[...new Set(areaMoods.map((m) => m.sentiment))].map((s) => {
-            // Map sentiments to colors
-            const colorMap: Record<string, string> = {
-              Positive: "#2ecc71",
-              Neutral: "#95a5a6",
-              Negative: "#e74c3c",
-              ...MOOD_COLORS,
-            };
-            return (
-              <div key={s} className="flex items-center gap-2 mt-1">
-                <div
-                  className="w-4 h-4 border border-white"
-                  style={{ background: colorMap[s] || "#95a5a6" }}
-                />
-                <span>{s}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+
     </div>
   );
 }

@@ -45,8 +45,10 @@ export function MapDashboard() {
     const [isSearching, setIsSearching] = React.useState(false);
 
     // State Management
-    const [activeLayers, setActiveLayers] = React.useState<Set<MapLayerId>>(() => new Set(['incidents', 'civic-issues', 'traffic', 'sentiment']));
     const [mapMode, setMapMode] = React.useState<MapMode>('Live');
+    const activeLayers = React.useMemo(() => {
+        return new Set<MapLayerId>(mapMode === 'Live' ? ['traffic'] : ['sentiment']);
+    }, [mapMode]);
     const [selectedFeature, setSelectedFeature] = React.useState<Feature | null>(null);
     const [isSheetOpen, setSheetOpen] = React.useState(false);
     const [isSearchFocused, setSearchFocused] = React.useState(false);
@@ -162,6 +164,7 @@ export function MapDashboard() {
                         activeLayers={activeLayers}
                         onFeatureClick={handleFeatureClick}
                         onMapLoad={handleMapLoad}
+                        mapMode={mapMode}
                     />
                 )}
 
@@ -189,8 +192,6 @@ export function MapDashboard() {
                     
                     {/* Right Controls */}
                     <div className={cn("flex items-center gap-2", isSearchFocused && "self-end")}>
-                        <LayerControls activeLayers={activeLayers} onToggle={toggleLayer} />
-                        <FilterControls severityFilter={severityFilter} onToggleSeverity={toggleSeverity} />
                         <ProfileControl />
                     </div>
                 </header>
@@ -204,26 +205,12 @@ export function MapDashboard() {
                         className="bg-card/80 backdrop-blur-sm p-1 rounded-full shadow-lg border border-border/50"
                     >
                         <ToggleGroupItem value="Live" className="rounded-full px-4 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">Live</ToggleGroupItem>
-                        <ToggleGroupItem value="Predict" className="rounded-full px-4 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">Predict</ToggleGroupItem>
                         <ToggleGroupItem value="Mood" className="rounded-full px-4 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">Mood</ToggleGroupItem>
                     </ToggleGroup>
                 </div>
 
                 {/* Bottom Right Quick Actions */}
                 <QuickActionsFab toast={toast} />
-
-                {/* Mood Legend */}
-                <div className="fixed left-4 top-36 z-20 bg-card/80 backdrop-blur-sm p-3 rounded-lg border border-border/50 shadow-md">
-                    <h5 className="text-xs font-medium mb-2">Mood Legend</h5>
-                    <div className="flex flex-col gap-1">
-                        {Object.entries(MOOD_COLORS).map(([mood, color]) => (
-                            <div key={mood} className="flex items-center gap-2 text-sm">
-                                <span style={{ background: color as string }} className="w-4 h-4 rounded-sm inline-block border" />
-                                <span className="capitalize">{mood}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
 
                 {/* Area Moods List */}
                 {displayAreaMoods.length > 0 && (
