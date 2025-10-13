@@ -247,7 +247,7 @@ export function MapDashboard() {
                 {/* Bottom Right Quick Actions */}
                 <QuickActionsFab toast={toast} />
 
-                {/* Area Moods List */}
+                {/* Area Moods List: Only show in Mood mode */}
                 {mapMode === 'Mood' && displayAreaMoods.length > 0 && (
                     <div className="fixed right-4 top-36 z-20 bg-card/80 backdrop-blur-sm p-3 rounded-lg border border-border/50 shadow-md max-w-xs">
                         <h5 className="text-xs font-medium mb-2">Area Moods</h5>
