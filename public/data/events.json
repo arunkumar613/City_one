@@ -1,0 +1,25 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [80.2825, 13.0569] },
+      "properties": {
+        "id": "EVT001",
+        "name": "Marina Beach Cleanup Drive",
+        "severity": "Info",
+        "description": "Community-led cleanup drive."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [80.2117, 13.0374] },
+      "properties": {
+        "id": "EVT002",
+        "name": "Book Fair at YMCA",
+        "severity": "Info",
+        "description": "Annual book fair with high footfall expected."
+      }
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "evt_001",
+    "name": "Chennai Music Festival",
+    "venue": "Music Academy",
+    "startTime": "2024-07-29T18:00:00Z",
+    "predictedDensity": 0.8,
+    "location": { "type": "Point", "coordinates": [80.26, 13.04] }
+  },
+  {
+    "id": "evt_002",
+    "name": "Street Food Fair",
+    "venue": "T. Nagar Pedestrian Plaza",
+    "startTime": "2024-07-29T17:00:00Z",
+    "predictedDensity": 0.9,
+    "location": { "type": "Point", "coordinates": [80.23, 13.03] }
+  },
+  {
+    "id": "evt_003",
+    "name": "Book Exhibition",
+    "venue": "YMCA Royapettah",
+    "startTime": "2024-07-29T11:00:00Z",
+    "predictedDensity": 0.5,
+    "location": { "type": "Point", "coordinates": [80.26, 13.05] }
+  },
+  {
+    "id": "evt_004",
+    "name": "IPL Fan Park - CSK vs MI",
+    "venue": "Marina Beach",
+    "startTime": "2024-07-29T19:30:00Z",
+    "predictedDensity": 0.95,
+    "location": { "type": "Point", "coordinates": [80.28, 13.05] }
+  }
+]

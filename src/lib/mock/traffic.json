@@ -1,0 +1,39 @@
+[
+  {
+    "roadId": "anna_salai",
+    "congestionLevel": 0.85,
+    "coordinates": [
+      [80.27, 13.08],
+      [80.26, 13.07],
+      [80.25, 13.06],
+      [80.24, 13.05]
+    ]
+  },
+  {
+    "roadId": "sardar_patel_road",
+    "congestionLevel": 0.6,
+    "coordinates": [
+      [80.25, 13.00],
+      [80.25, 13.01],
+      [80.25, 13.02]
+    ]
+  },
+  {
+    "roadId": "omr_it_expressway",
+    "congestionLevel": 0.9,
+    "coordinates": [
+      [80.24, 12.98],
+      [80.24, 12.97],
+      [80.24, 12.96]
+    ]
+  },
+  {
+    "roadId": "beach_road",
+    "congestionLevel": 0.3,
+    "coordinates": [
+      [80.28, 13.04],
+      [80.28, 13.05],
+      [80.28, 13.06]
+    ]
+  }
+]

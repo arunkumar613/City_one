@@ -1,0 +1,33 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [80.235, 13.03] },
+      "properties": {
+        "id": "CIV001", "category": "Pothole", "severity": "Minor", "description": "Large pothole on side street."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [80.26, 13.01] },
+      "properties": {
+        "id": "CIV002", "category": "Garbage", "severity": "Major", "description": "Waste overflow from community bin."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [80.25, 12.99] },
+      "properties": {
+        "id": "CIV003", "category": "Water", "severity": "Critical", "description": "Main water pipe burst."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [80.22, 13.06] },
+      "properties": {
+        "id": "CIV004", "category": "Electricity", "severity": "Major", "description": "Power outage in the area."
+      }
+    }
+  ]
+}

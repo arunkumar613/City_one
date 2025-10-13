@@ -1,0 +1,47 @@
+[
+  {
+    "id": "civ_001",
+    "category": "Pothole",
+    "status": "Reported",
+    "severity": "Minor",
+    "location": { "type": "Point", "coordinates": [80.2495, 13.06] },
+    "updatedAt": "2024-07-29T08:00:00Z",
+    "description": "Large pothole on Sterling Road, Nungambakkam causing traffic slowdown."
+  },
+  {
+    "id": "civ_002",
+    "category": "Garbage",
+    "status": "In-Progress",
+    "severity": "Major",
+    "location": { "type": "Point", "coordinates": [80.27, 13.00] },
+    "updatedAt": "2024-07-29T10:15:00Z",
+    "description": "Garbage overflow at Besant Nagar beach entrance. Cleanup crew has been dispatched."
+  },
+  {
+    "id": "civ_003",
+    "category": "Water",
+    "status": "Resolved",
+    "severity": "Info",
+    "location": { "type": "Point", "coordinates": [80.20, 13.04] },
+    "updatedAt": "2024-07-28T17:45:00Z",
+    "description": "Minor water leak reported in Vadapalani has been fixed."
+  },
+  {
+    "id": "civ_004",
+    "category": "Electricity",
+    "status": "Reported",
+    "severity": "Critical",
+    "location": { "type": "Point", "coordinates": [80.23, 12.99] },
+    "updatedAt": "2024-07-29T11:20:00Z",
+    "description": "Power outage affecting multiple streets in Velachery. Transformer issue suspected."
+  },
+  {
+    "id": "civ_005",
+    "category": "Pothole",
+    "status": "Reported",
+    "severity": "Major",
+    "location": { "type": "Point", "coordinates": [80.265, 13.085] },
+    "updatedAt": "2024-07-29T09:30:00Z",
+    "description": "Series of deep potholes on Poonamallee High Road near Chennai Central."
+  }
+]

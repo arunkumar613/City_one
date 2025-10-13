@@ -1,0 +1,62 @@
+[
+  {
+    "id": "inc_001",
+    "type": "Road Accident",
+    "severity": "Major",
+    "timestamp": "2024-07-29T22:30:00Z",
+    "location": { "type": "Point", "coordinates": [80.2785, 13.0827] },
+    "description": "Multi-car pile-up on Anna Salai near Spencer Plaza. Heavy traffic disruption.",
+    "mediaUrls": ["https://picsum.photos/seed/acc1/800/600"],
+    "ward": "Zone 10 - Kodambakkam"
+  },
+  {
+    "id": "inc_002",
+    "type": "Fire",
+    "severity": "Critical",
+    "timestamp": "2024-07-29T23:05:00Z",
+    "location": { "type": "Point", "coordinates": [80.2500, 13.0000] },
+    "description": "Building fire reported in a commercial complex in Adyar. Multiple fire engines on site.",
+    "mediaUrls": [],
+    "ward": "Zone 13 - Adyar"
+  },
+  {
+    "id": "inc_003",
+    "type": "Protest",
+    "severity": "Minor",
+    "timestamp": "2024-07-29T21:15:00Z",
+    "location": { "type": "Point", "coordinates": [80.2707, 13.0628] },
+    "description": "Small, peaceful protest near Marina Beach. No traffic impact.",
+    "mediaUrls": [],
+    "ward": "Zone 9 - Teynampet"
+  },
+  {
+    "id": "inc_004",
+    "type": "Flooding",
+    "severity": "Major",
+    "timestamp": "2024-07-29T23:10:00Z",
+    "location": { "type": "Point", "coordinates": [80.21, 13.01] },
+    "description": "Waterlogging in Madipakkam due to heavy rains. Roads are impassable for small vehicles.",
+    "mediaUrls": ["https://picsum.photos/seed/flood1/800/600"],
+    "ward": "Zone 14 - Perungudi"
+  },
+  {
+    "id": "inc_005",
+    "type": "Traffic Jam",
+    "severity": "Info",
+    "timestamp": "2024-07-29T22:45:00Z",
+    "location": { "type": "Point", "coordinates": [80.23, 13.03] },
+    "description": "Heavy congestion around T. Nagar due to evening shoppers and a local event.",
+    "mediaUrls": [],
+    "ward": "Zone 10 - Kodambakkam"
+  },
+    {
+    "id": "inc_006",
+    "type": "Road Accident",
+    "severity": "Minor",
+    "timestamp": "2024-07-29T22:35:00Z",
+    "location": { "type": "Point", "coordinates": [80.2795, 13.0837] },
+    "description": "Minor fender-bender near the main accident on Anna Salai.",
+    "mediaUrls": [],
+    "ward": "Zone 10 - Kodambakkam"
+  }
+]

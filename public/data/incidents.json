@@ -1,0 +1,83 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [80.2785, 13.0604] },
+      "properties": {
+        "id": "INC001",
+        "type": "Traffic",
+        "severity": "Major",
+        "timestamp": "2024-08-15T18:30:00Z",
+        "description": "Heavy congestion on Anna Salai near Spencer Plaza. Expected delay 30 mins.",
+        "mediaUrls": ["1"],
+        "ward": "Zone 10 - Kodambakkam"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [80.2500, 13.0074] },
+      "properties": {
+        "id": "INC002",
+        "type": "Civic",
+        "severity": "Minor",
+        "timestamp": "2024-08-15T19:00:00Z",
+        "description": "Water logging reported in Velachery near the MRTS station.",
+        "mediaUrls": ["2"],
+        "ward": "Zone 13 - Adyar"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [80.2850, 13.0850] },
+      "properties": {
+        "id": "INC003",
+        "type": "Event",
+        "severity": "Info",
+        "timestamp": "2024-08-15T20:00:00Z",
+        "description": "Live concert at Marina Beach. Large crowd gathering.",
+        "mediaUrls": [],
+        "ward": "Zone 9 - Teynampet"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [80.279, 13.082] },
+      "properties": {
+        "id": "INC004",
+        "type": "Accident",
+        "severity": "Critical",
+        "timestamp": "2024-08-15T19:10:00Z",
+        "description": "Multi-vehicle collision on Napier Bridge. Emergency services on site.",
+        "mediaUrls": ["3"],
+        "ward": "Zone 5 - Royapuram"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [80.246, 13.047] },
+      "properties": {
+        "id": "INC005",
+        "type": "Traffic",
+        "severity": "Major",
+        "timestamp": "2024-08-15T18:45:00Z",
+        "description": "Gridlock traffic in T. Nagar, Ranganathan Street.",
+        "mediaUrls": [],
+        "ward": "Zone 10 - Kodambakkam"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [80.247, 13.048] },
+      "properties": {
+        "id": "INC006",
+        "type": "Traffic",
+        "severity": "Major",
+        "timestamp": "2024-08-15T18:46:00Z",
+        "description": "Duplicate: Gridlock traffic in T. Nagar, Usman Road.",
+        "mediaUrls": [],
+        "ward": "Zone 10 - Kodambakkam"
+      }
+    }
+  ]
+}

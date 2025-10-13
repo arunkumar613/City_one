@@ -1,3 +1,28 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "accident-1",
+      "description": "A street view of a traffic accident.",
+      "imageUrl": "https://picsum.photos/seed/acc1/800/600",
+      "imageHint": "traffic accident"
+    },
+    {
+      "id": "pothole-1",
+      "description": "A large pothole on a city road.",
+      "imageUrl": "https://picsum.photos/seed/pot1/800/600",
+      "imageHint": "pothole road"
+    },
+    {
+      "id": "garbage-1",
+      "description": "An overflowing garbage bin on a sidewalk.",
+      "imageUrl": "https://picsum.photos/seed/gar1/800/600",
+      "imageHint": "garbage pile"
+    },
+    {
+      "id": "flood-1",
+      "description": "A flooded city street with cars partially submerged.",
+      "imageUrl": "https://picsum.photos/seed/flood1/800/600",
+      "imageHint": "city flood"
+    }
+  ]
 }
