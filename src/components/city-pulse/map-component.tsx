@@ -19,6 +19,7 @@ import type {
   TrafficData,
   SentimentData,
 } from "@/lib/types";
+import { MOOD_COLORS } from "@/lib/useAreaMood";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle } from "lucide-react";
 
@@ -35,7 +36,7 @@ type TrafficGeoJSON = GeoJSON.FeatureCollection<
 >;
 type SentimentGeoJSON = GeoJSON.FeatureCollection<
   GeoJSON.Polygon,
-  { score: number }
+  { score: number; area: string; sentiment: string }
 >;
 
 interface MapComponentProps {
@@ -44,6 +45,13 @@ interface MapComponentProps {
   events: Event[];
   traffic: TrafficData[];
   sentiment: SentimentData[];
+  areaMoods?: {
+    id: string;
+    area: string;
+    sentiment: string;
+    description?: string;
+    polygon?: number[][][];
+  }[];
   activeLayers: Set<MapLayerId>;
   onFeatureClick: (feature: any) => void;
   onMapLoad: (map: MapRef) => void;
@@ -63,7 +71,7 @@ const toGeoJSON = (
   type: "FeatureCollection",
   features: items.map((item) => ({
     type: "Feature",
-    geometry: item.location,
+    geometry: item.location || { type: "Point", coordinates: [80.2785, 13.06] },
     properties: item,
   })),
 });
@@ -74,10 +82,10 @@ const trafficToGeoJSON = (items: TrafficData[]): TrafficGeoJSON => ({
     type: "Feature",
     geometry: {
       type: "LineString",
-      coordinates: item.coordinates,
+      coordinates: item.coordinates || [],
     },
     properties: {
-      congestionLevel: item.congestionLevel,
+      congestionLevel: item.congestionLevel || 0,
     },
   })),
 });
@@ -88,13 +96,35 @@ const sentimentToGeoJSON = (items: SentimentData[]): SentimentGeoJSON => ({
     type: "Feature",
     geometry: {
       type: "Polygon",
-      coordinates: item.polygon,
+      coordinates: item.polygon || getDefaultPolygonForArea(item.area),
     },
     properties: {
-      score: item.score,
+      score: item.score || 0,
+      area: item.area,
+      sentiment: item.sentiment,
     },
   })),
 });
+
+// Generate default polygons for areas based on their names
+function getDefaultPolygonForArea(area: string): number[][][] {
+  // Simple hash function to generate consistent coordinates based on area name
+  const hash = area.split('').reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0);
+  
+  const baseLng = 80.2785 + (hash % 100) / 1000;
+  const baseLat = 13.06 + (hash % 100) / 1000;
+  
+  return [[
+    [baseLng - 0.01, baseLat - 0.01],
+    [baseLng + 0.01, baseLat - 0.01],
+    [baseLng + 0.01, baseLat + 0.01],
+    [baseLng - 0.01, baseLat + 0.01],
+    [baseLng - 0.01, baseLat - 0.01],
+  ]];
+}
 
 export function MapComponent({
   incidents,
@@ -102,11 +132,31 @@ export function MapComponent({
   events,
   traffic,
   sentiment,
+  areaMoods = [],
   activeLayers,
   onFeatureClick,
   onMapLoad,
 }: MapComponentProps) {
   const mapRef = React.useRef<MapRef>(null);
+
+  // Convert area moods with polygons to GeoJSON for map rendering
+  const areaMoodsGeoJSON = React.useMemo(() => ({
+    type: "FeatureCollection",
+    features: (areaMoods || [])
+      .filter((a) => Array.isArray(a.polygon))
+      .map((a) => ({
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: a.polygon,
+        },
+        properties: {
+          id: a.id,
+          area: a.area,
+          sentiment: a.sentiment,
+        },
+      })),
+  }), [areaMoods]);
 
   if (!MAPBOX_TOKEN || MAPBOX_TOKEN === "YOUR_MAPBOX_TOKEN_HERE") {
     return (
@@ -152,10 +202,6 @@ export function MapComponent({
     () => trafficToGeoJSON(traffic),
     [traffic]
   );
-  const sentimentSource = React.useMemo(
-    () => sentimentToGeoJSON(sentiment),
-    [sentiment]
-  );
 
   const handleFeatureClick = (event: MapLayerMouseEvent) => {
     if (event.features && event.features.length > 0) {
@@ -171,7 +217,7 @@ export function MapComponent({
         if (!source) return;
 
         source.getClusterExpansionZoom(clusterId, (err, zoom) => {
-          if (err || zoom === undefined) return;
+          if (err || zoom == null) return;
           map.easeTo({
             center: (feature.geometry as GeoJSON.Point).coordinates as [
               number,
@@ -195,12 +241,9 @@ export function MapComponent({
   const onInternalLoad = () => {
     const map = mapRef.current?.getMap();
     if (map) {
-      // notify parent that the map is ready
       onMapLoad(mapRef.current!);
 
       // Setup Mapbox vector tiles traffic source + layer for real-time traffic
-      // Use a distinct source id ('mapbox-traffic') to avoid colliding with the existing
-      // GeoJSON `traffic` source used elsewhere in this component.
       try {
         if (activeLayers.has("traffic")) {
           if (!map.getSource("mapbox-traffic")) {
@@ -239,7 +282,6 @@ export function MapComponent({
             } as any);
           }
         } else {
-          // If traffic layer isn't active, remove the vector traffic layer/source if present
           if (map.getLayer("mapbox-traffic-layer")) {
             map.removeLayer("mapbox-traffic-layer");
           }
@@ -248,13 +290,25 @@ export function MapComponent({
           }
         }
       } catch (err) {
-        // Non-fatal: adding/removing a layer could fail if map is in a transient state
-        // Log for debugging but don't crash the app.
-        // eslint-disable-next-line no-console
         console.warn("Error setting up Mapbox traffic layer:", err);
       }
     }
   };
+
+  // Helper function to convert sentiment to numerical score
+  function getSentimentScore(sentiment: string): number {
+    const scoreMap: Record<string, number> = {
+      "super happy": 1.0,
+      "happy": 0.7,
+      "neutral": 0.0,
+      "sad": -0.7,
+      "super sad": -1.0,
+      "angry": -0.5,
+      "super angry": -0.9
+    };
+    
+    return scoreMap[sentiment] || 0.0;
+  }
 
   return (
     <Map
@@ -351,35 +405,10 @@ export function MapComponent({
               "circle-opacity": 0.8,
             }}
           />
-          <Layer
-            id="unclustered-incidents-fresh-glow"
-            type="circle"
-            source="incidents"
-            filter={[
-              "all",
-              ["!", ["has", "point_count"]],
-              ["==", ["get", "isFresh"], true],
-            ]}
-            paint={{
-              "circle-radius": 16,
-              "circle-color": [
-                "match",
-                ["get", "severity"],
-                "Critical",
-                severityColorMap.Critical,
-                "Major",
-                severityColorMap.Major,
-                "Minor",
-                severityColorMap.Minor,
-                severityColorMap.Info,
-              ],
-              "circle-opacity": 0.3,
-              "circle-blur": 0.8,
-            }}
-          />
         </Source>
       )}
 
+      {/* Civic Issues Layer */}
       {activeLayers.has("civic-issues") && (
         <Source id="civic-issues" type="geojson" data={civicIssuesSource}>
           <Layer
@@ -410,6 +439,7 @@ export function MapComponent({
         </Source>
       )}
 
+      {/* Events Layer */}
       {activeLayers.has("events") && (
         <Source id="events" type="geojson" data={eventsSource}>
           <Layer
@@ -422,12 +452,13 @@ export function MapComponent({
               "icon-allow-overlap": true,
             }}
             paint={{
-              "icon-color": "#FFD166", // Minor severity color
+              "icon-color": "#FFD166",
             }}
           />
         </Source>
       )}
 
+      {/* Traffic Layer */}
       {activeLayers.has("traffic") && (
         <Source id="traffic" type="geojson" data={trafficSource}>
           <Layer
@@ -445,11 +476,11 @@ export function MapComponent({
                 ["linear"],
                 ["get", "congestionLevel"],
                 0,
-                "#39FF14", // Low congestion (Green)
+                "#39FF14",
                 0.5,
-                "#FFFF00", // Medium (Yellow)
+                "#FFFF00",
                 1,
-                "#FF4500", // High (Red)
+                "#FF4500",
               ],
               "line-opacity": 0.7,
             }}
@@ -457,36 +488,37 @@ export function MapComponent({
         </Source>
       )}
 
+      {/* Sentiment Layer */}
       {activeLayers.has("sentiment") && (
-        <Source id="sentiment" type="geojson" data={sentimentSource}>
+        <Source id="area-moods" type="geojson" data={areaMoodsGeoJSON}>
           <Layer
-            id="sentiment-fill"
+            id="area-moods-fill"
             type="fill"
-            source="sentiment"
+            source="area-moods"
             paint={{
               "fill-color": [
-                "interpolate",
-                ["linear"],
-                ["get", "score"],
-                -1,
-                "#FF4D6D", // Negative sentiment (Red)
-                0,
-                "#0A1428", // Neutral (Background color, transparent)
-                1,
-                "#1AC6C6", // Positive sentiment (Teal)
+                "match",
+                ["get", "sentiment"],
+                ...Object.entries(MOOD_COLORS).flat(),
+                "#95a5a6",
               ],
-              "fill-opacity": 0.3,
-              "fill-outline-color": [
-                "interpolate",
-                ["linear"],
-                ["get", "score"],
-                -1,
-                "#FF4D6D",
-                0,
-                "transparent",
-                1,
-                "#1AC6C6",
-              ],
+              "fill-opacity": 0.5,
+              "fill-outline-color": "#ffffff",
+            }}
+          />
+          <Layer
+            id="area-moods-labels"
+            type="symbol"
+            source="area-moods"
+            layout={{
+              "text-field": ["get", "area"],
+              "text-size": 12,
+              "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
+            }}
+            paint={{
+              "text-color": "#ffffff",
+              "text-halo-color": "#000000",
+              "text-halo-width": 1,
             }}
           />
         </Source>

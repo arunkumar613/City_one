@@ -5,8 +5,8 @@ import type { MapRef } from 'react-map-gl';
 
 import { MapComponent } from './map-component';
 import { IncidentSheet } from './incident-sheet';
-import { getAllData } from '@/lib/data';
-import type { Incident, CivicIssue, Event, MapLayer, MapLayerId, MapMode, Severity, TrafficData, SentimentData } from '@/lib/types';
+import { useAreaMood, MOOD_COLORS } from '@/lib/useAreaMood';
+import type { Incident, CivicIssue, Event, MapLayer, MapLayerId, MapMode, Severity, TrafficData, SentimentData, AreaMood } from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,8 +37,9 @@ type Feature = Incident | CivicIssue | Event;
 
 // Main Dashboard Component
 export function MapDashboard() {
-    const [data] = React.useState(getAllData());
-    const [filteredData, setFilteredData] = React.useState(data);
+    // Fetch all data from Supabase using custom hooks
+    const { areas: areaMoods, loading: areaLoading, error: areaError } = useAreaMood();
+
     const [mapRef, setMapRef] = React.useState<MapRef | null>(null);
     const [searchQuery, setSearchQuery] = React.useState('');
     const [isSearching, setIsSearching] = React.useState(false);
@@ -53,6 +54,27 @@ export function MapDashboard() {
     // Filters
     const [severityFilter, setSeverityFilter] = React.useState<Set<Severity>>(() => new Set(SEVERITIES));
     const { toast } = useToast();
+
+    // Handle errors
+    React.useEffect(() => {
+        if (areaError) {
+            toast({
+                title: "Data loading error",
+                description: `Failed to load area mood data: ${areaError.message || 'Unknown error'}`,
+                variant: "destructive"
+            });
+        }
+    }, [areaError, toast]);
+
+    // Only area moods are used now
+
+    // Combine area moods with sentiment data for display
+    const displayAreaMoods = React.useMemo(() => {
+        return areaMoods.map(mood => ({
+            ...mood,
+            description: mood.description || `Area mood: ${mood.sentiment}`
+        }));
+    }, [areaMoods]);
 
     // Handlers
     const handleFeatureClick = React.useCallback((feature: any) => {
@@ -117,25 +139,31 @@ export function MapDashboard() {
         });
     };
 
-    // Effect for filtering data
-    React.useEffect(() => {
-        const incidents = data.incidents.filter(inc => severityFilter.has(inc.severity));
-        setFilteredData({ ...data, incidents });
-    }, [severityFilter, data]);
+    const loading = areaLoading;
 
     return (
         <TooltipProvider>
             <div className="relative h-screen w-screen bg-background text-foreground">
-                <MapComponent
-                    incidents={filteredData.incidents}
-                    civicIssues={filteredData.civicIssues}
-                    events={filteredData.events}
-                    traffic={filteredData.traffic}
-                    sentiment={filteredData.sentiment}
-                    activeLayers={activeLayers}
-                    onFeatureClick={handleFeatureClick}
-                    onMapLoad={handleMapLoad}
-                />
+                {loading ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-50">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                            <p className="text-muted-foreground">Loading map data...</p>
+                        </div>
+                    </div>
+                ) : (
+                    <MapComponent
+                        incidents={[]}
+                        civicIssues={[]}
+                        events={[]}
+                        traffic={[]}
+                        sentiment={[]}
+                        areaMoods={displayAreaMoods}
+                        activeLayers={activeLayers}
+                        onFeatureClick={handleFeatureClick}
+                        onMapLoad={handleMapLoad}
+                    />
+                )}
 
                 {/* Top Header Controls */}
                 <header className={cn("fixed top-0 left-0 right-0 p-3 sm:p-4 z-10 flex items-start justify-between gap-4 transition-all duration-300",
@@ -171,7 +199,6 @@ export function MapDashboard() {
                 <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-10">
                     <ToggleGroup
                         type="single"
-                        defaultValue="Live"
                         value={mapMode}
                         onValueChange={(value: MapMode) => value && setMapMode(value)}
                         className="bg-card/80 backdrop-blur-sm p-1 rounded-full shadow-lg border border-border/50"
@@ -185,6 +212,42 @@ export function MapDashboard() {
                 {/* Bottom Right Quick Actions */}
                 <QuickActionsFab toast={toast} />
 
+                {/* Mood Legend */}
+                <div className="fixed left-4 top-36 z-20 bg-card/80 backdrop-blur-sm p-3 rounded-lg border border-border/50 shadow-md">
+                    <h5 className="text-xs font-medium mb-2">Mood Legend</h5>
+                    <div className="flex flex-col gap-1">
+                        {Object.entries(MOOD_COLORS).map(([mood, color]) => (
+                            <div key={mood} className="flex items-center gap-2 text-sm">
+                                <span style={{ background: color as string }} className="w-4 h-4 rounded-sm inline-block border" />
+                                <span className="capitalize">{mood}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Area Moods List */}
+                {displayAreaMoods.length > 0 && (
+                    <div className="fixed right-4 top-36 z-20 bg-card/80 backdrop-blur-sm p-3 rounded-lg border border-border/50 shadow-md max-w-xs">
+                        <h5 className="text-xs font-medium mb-2">Area Moods</h5>
+                        <div className="flex flex-col gap-2 max-h-60 overflow-y-auto">
+                            {displayAreaMoods.map((area) => (
+                                <div key={area.id} className="flex items-center justify-between text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <span 
+                                            style={{ background: MOOD_COLORS[area.sentiment] }} 
+                                            className="w-3 h-3 rounded-sm inline-block border" 
+                                        />
+                                        <span className="font-medium">{area.area}</span>
+                                    </div>
+                                    <span className="text-muted-foreground capitalize text-xs">
+                                        {area.sentiment}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* Details Sheet */}
                 <IncidentSheet
                     feature={selectedFeature}
@@ -195,7 +258,6 @@ export function MapDashboard() {
         </TooltipProvider>
     );
 }
-
 
 // Sub-components for controls
 const LayerControls = ({ activeLayers, onToggle }: { activeLayers: Set<MapLayerId>, onToggle: (id: MapLayerId) => void }) => (

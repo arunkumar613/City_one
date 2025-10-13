@@ -14,6 +14,7 @@ export const getIncidents = (): Incident[] => {
     const now = Date.now();
     return incidentsData.map(incident => ({
         ...incident,
+        location: { type: 'Point', coordinates: incident.location.coordinates as [number, number] },
         isFresh: (now - new Date(incident.timestamp).getTime()) < 10 * 60 * 1000 // < 10 minutes old
     })) as Incident[];
 };
