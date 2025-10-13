@@ -21,6 +21,8 @@ import { Search, Layers, SlidersHorizontal, User, Plus, Compass, Share2 } from '
 import { cn } from '@/lib/utils';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
 const ALL_LAYERS: MapLayer[] = [
     { id: 'incidents', name: 'Incidents' },
     { id: 'civic-issues', name: 'Civic Issues' },
@@ -38,6 +40,8 @@ export function MapDashboard() {
     const [data] = React.useState(getAllData());
     const [filteredData, setFilteredData] = React.useState(data);
     const [mapRef, setMapRef] = React.useState<MapRef | null>(null);
+    const [searchQuery, setSearchQuery] = React.useState('');
+    const [isSearching, setIsSearching] = React.useState(false);
 
     // State Management
     const [activeLayers, setActiveLayers] = React.useState<Set<MapLayerId>>(() => new Set(['incidents', 'civic-issues', 'traffic', 'sentiment']));
@@ -60,6 +64,34 @@ export function MapDashboard() {
     const handleMapLoad = React.useCallback((map: MapRef) => {
         setMapRef(map);
     }, []);
+
+    const geocodeAndFly = React.useCallback(async (query: string) => {
+        const q = query.trim();
+        if (!q) return;
+        if (!MAPBOX_TOKEN) {
+            toast({ title: 'Mapbox token missing', description: 'Set NEXT_PUBLIC_MAPBOX_TOKEN in .env.local', variant: 'destructive' });
+            return;
+        }
+        try {
+            setIsSearching(true);
+            const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?access_token=${MAPBOX_TOKEN}&limit=1&types=place,poi,locality,neighborhood,address&proximity=80.2785,13.06`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('Failed to search');
+            const data = await res.json();
+            const feature = data?.features?.[0];
+            if (!feature?.center) {
+                toast({ title: 'No results', description: 'Try a different place or address.' });
+                return;
+            }
+            const [lng, lat] = feature.center as [number, number];
+            const map = mapRef?.getMap();
+            map?.flyTo({ center: [lng, lat], zoom: 14, essential: true });
+        } catch (err) {
+            toast({ title: 'Search failed', description: 'Please try again in a moment.', variant: 'destructive' });
+        } finally {
+            setIsSearching(false);
+        }
+    }, [mapRef, toast]);
 
     const toggleLayer = (layerId: MapLayerId) => {
         setActiveLayers(prev => {
@@ -110,13 +142,20 @@ export function MapDashboard() {
                     isSearchFocused && "bg-background/80 backdrop-blur-sm flex-col sm:flex-row")}>
                     
                     {/* Search Bar */}
-                    <div className={cn("relative transition-all duration-300 w-full max-w-xs sm:max-w-sm", isSearchFocused && "max-w-full")}>
+                    <div className={cn("relative transition-all duration-300 w-full max-w-xs sm:max-w-sm", isSearchFocused && "max-w-full")}> 
                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <Input
                             placeholder="Search areas, roads, wards..."
                             className="pl-10 h-11 rounded-full bg-card/80 backdrop-blur-sm border-border/50 shadow-lg focus:bg-card/95 focus:ring-primary"
                             onFocus={() => setSearchFocused(true)}
                             onBlur={() => setSearchFocused(false)}
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    geocodeAndFly(searchQuery);
+                                }
+                            }}
                         />
                     </div>
                     
