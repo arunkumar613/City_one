@@ -19,7 +19,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Layers, SlidersHorizontal, User, Plus, Compass, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { TooltipProvider } from '@radix-ui/react-tooltip';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 const ALL_LAYERS: MapLayer[] = [
     { id: 'incidents', name: 'Incidents' },

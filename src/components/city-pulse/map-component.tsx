@@ -77,10 +77,12 @@ export function MapComponent({ incidents, civicIssues, events, activeLayers, onF
     const handleFeatureClick = (event: MapLayerMouseEvent) => {
         if (event.features && event.features.length > 0) {
             const feature = event.features[0];
+            const map = mapRef.current?.getMap();
+            if (!map) return;
+            
             if (feature.properties?.cluster) {
                 const clusterId = feature.properties.cluster_id;
-                const map = mapRef.current?.getMap();
-                const source = map?.getSource('incidents') as mapboxgl.GeoJSONSource | undefined;
+                const source = map.getSource('incidents') as mapboxgl.GeoJSONSource | undefined;
                 if (!source) return;
 
                 source.getClusterExpansionZoom(clusterId, (err, zoom) => {
@@ -91,7 +93,19 @@ export function MapComponent({ incidents, civicIssues, events, activeLayers, onF
                     });
                 });
             } else {
-                onFeatureClick(JSON.parse(feature.properties?.data || '{}'));
+                 const properties = feature.properties;
+                 // Mapbox stringifies nested properties, so we need to parse them.
+                 // This is a common issue when passing complex objects as properties.
+                 const incidentData = properties?.type ? properties : JSON.parse(properties?.data || '{}');
+                 onFeatureClick(incidentData);
+
+                // Add a popup
+                const coordinates = (feature.geometry as GeoJSON.Point).coordinates.slice() as [number, number];
+                const description = properties?.description || 'No description available.';
+
+                while (Math.abs(event.lngLat.lng - coordinates[0]) > 180) {
+                    coordinates[0] += event.lngLat.lng > coordinates[0] ? 360 : -360;
+                }
             }
         }
     };
@@ -143,7 +157,7 @@ export function MapComponent({ incidents, civicIssues, events, activeLayers, onF
                             ],
                             'circle-radius': ['step', ['get', 'point_count'], 20, 100, 30, 750, 40],
                             'circle-stroke-width': 2,
-                            'circle-stroke-color': 'hsl(var(--border))',
+                            'circle-stroke-color': '#1E3A8A',
                         }}
                     />
                     <Layer
@@ -168,7 +182,7 @@ export function MapComponent({ incidents, civicIssues, events, activeLayers, onF
                         paint={{
                             'circle-color': [
                                 'match',
-                                ['get', 'severity', ['get', 'properties']],
+                                ['get', 'severity'],
                                 'Critical', severityColorMap.Critical,
                                 'Major', severityColorMap.Major,
                                 'Minor', severityColorMap.Minor,
@@ -184,12 +198,12 @@ export function MapComponent({ incidents, civicIssues, events, activeLayers, onF
                         id="unclustered-incidents-fresh-glow"
                         type="circle"
                         source="incidents"
-                        filter={['all', ['!', ['has', 'point_count']], ['==', ['get', 'isFresh', ['get', 'properties']], true]]}
+                        filter={['all', ['!', ['has', 'point_count']], ['==', ['get', 'isFresh'], true]]}
                         paint={{
                             'circle-radius': 16,
                             'circle-color': [
                                 'match',
-                                ['get', 'severity', ['get', 'properties']],
+                                ['get', 'severity'],
                                 'Critical', severityColorMap.Critical,
                                 'Major', severityColorMap.Major,
                                 'Minor', severityColorMap.Minor,
@@ -211,7 +225,7 @@ export function MapComponent({ incidents, civicIssues, events, activeLayers, onF
                         layout={{
                             'icon-image': [
                                 'match',
-                                ['get', 'category', ['get', 'properties']],
+                                ['get', 'category'],
                                 'Pothole', 'roadblock',
                                 'Garbage', 'waste-basket',
                                 'Water', 'water',
