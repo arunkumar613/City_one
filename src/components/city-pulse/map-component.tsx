@@ -6,6 +6,8 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import type { MapRef } from 'react-map-gl';
 import type { Incident, CivicIssue, Event, MapLayerId } from '@/lib/types';
 import { LngLatBounds } from 'mapbox-gl';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertTriangle } from 'lucide-react';
 
 // It's recommended to store this in an environment variable
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -41,12 +43,26 @@ const toGeoJSON = (items: (Incident | CivicIssue | Event)[], idPrefix: string): 
 export function MapComponent({ incidents, civicIssues, events, activeLayers, onFeatureClick, onMapLoad }: MapComponentProps) {
     const mapRef = React.useRef<MapRef>(null);
 
-    React.useEffect(() => {
-        if (!MAPBOX_TOKEN) {
-            console.error("Mapbox token is not set. Please set NEXT_PUBLIC_MAPBOX_TOKEN in your environment variables.");
-        }
-    }, []);
-
+    if (!MAPBOX_TOKEN || MAPBOX_TOKEN === 'YOUR_MAPBOX_TOKEN_HERE') {
+      return (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-20">
+              <Card className="max-w-md mx-4 text-center">
+                  <CardHeader>
+                      <CardTitle className="flex items-center justify-center gap-2">
+                          <AlertTriangle className="text-destructive" />
+                          Map Configuration Needed
+                      </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                      <p className="text-muted-foreground">
+                          Please add your Mapbox Access Token to the <code className="bg-muted px-1 py-0.5 rounded-sm">.env.local</code> file to enable map functionality.
+                      </p>
+                  </CardContent>
+              </Card>
+          </div>
+      );
+    }
+    
     const initialViewState: Partial<ViewState> = {
         longitude: 80.2785,
         latitude: 13.06,
