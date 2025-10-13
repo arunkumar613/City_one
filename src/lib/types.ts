@@ -54,4 +54,4 @@ export type MapLayer = {
   name: string;
 };
 
-export type MapMode = 'Live' | 'Mood';
+export type MapMode = 'Live' | 'Mood' | 'Events';

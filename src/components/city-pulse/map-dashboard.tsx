@@ -47,7 +47,16 @@ export function MapDashboard() {
     // State Management
     const [mapMode, setMapMode] = React.useState<MapMode>('Live');
     const activeLayers = React.useMemo(() => {
-        return new Set<MapLayerId>(mapMode === 'Live' ? ['traffic'] : ['sentiment']);
+        switch (mapMode) {
+            case 'Live':
+                return new Set<MapLayerId>(['traffic']);
+            case 'Events':
+                return new Set<MapLayerId>(['events']);
+            case 'Mood':
+                return new Set<MapLayerId>(['sentiment']);
+            default:
+                return new Set<MapLayerId>();
+        }
     }, [mapMode]);
     const [selectedFeature, setSelectedFeature] = React.useState<Feature | null>(null);
     const [isSheetOpen, setSheetOpen] = React.useState(false);
@@ -197,23 +206,49 @@ export function MapDashboard() {
                 </header>
 
                 {/* Bottom Center Context Switcher */}
-                <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-10">
-                    <ToggleGroup
-                        type="single"
-                        value={mapMode}
-                        onValueChange={(value: MapMode) => value && setMapMode(value)}
-                        className="bg-card/80 backdrop-blur-sm p-1 rounded-full shadow-lg border border-border/50"
-                    >
-                        <ToggleGroupItem value="Live" className="rounded-full px-4 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">Live</ToggleGroupItem>
-                        <ToggleGroupItem value="Mood" className="rounded-full px-4 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">Mood</ToggleGroupItem>
-                    </ToggleGroup>
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-10">
+                    <div className="bg-background/10 backdrop-blur-md p-1.5 rounded-2xl shadow-xl border border-white/10 relative overflow-hidden">
+                        <ToggleGroup
+                            type="single"
+                            value={mapMode}
+                            onValueChange={(value: MapMode) => value && setMapMode(value)}
+                            className="relative z-10 flex gap-1"
+                        >
+                            <ToggleGroupItem 
+                                value="Live" 
+                                className="relative px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 
+                                data-[state=on]:bg-primary/20 data-[state=on]:text-primary-foreground data-[state=on]:shadow-inner
+                                data-[state=off]:text-muted-foreground hover:text-primary-foreground flex items-center gap-2"
+                            >
+                                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                                Live View
+                            </ToggleGroupItem>
+                            <ToggleGroupItem 
+                                value="Events" 
+                                className="relative px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
+                                data-[state=on]:bg-primary/20 data-[state=on]:text-primary-foreground data-[state=on]:shadow-inner
+                                data-[state=off]:text-muted-foreground hover:text-primary-foreground"
+                            >
+                                Events
+                            </ToggleGroupItem>
+                            <ToggleGroupItem 
+                                value="Mood" 
+                                className="relative px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
+                                data-[state=on]:bg-primary/20 data-[state=on]:text-primary-foreground data-[state=on]:shadow-inner
+                                data-[state=off]:text-muted-foreground hover:text-primary-foreground"
+                            >
+                                Mood Map
+                            </ToggleGroupItem>
+                        </ToggleGroup>
+                        <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent opacity-50"></div>
+                    </div>
                 </div>
 
                 {/* Bottom Right Quick Actions */}
                 <QuickActionsFab toast={toast} />
 
                 {/* Area Moods List */}
-                {displayAreaMoods.length > 0 && (
+                {mapMode === 'Mood' && displayAreaMoods.length > 0 && (
                     <div className="fixed right-4 top-36 z-20 bg-card/80 backdrop-blur-sm p-3 rounded-lg border border-border/50 shadow-md max-w-xs">
                         <h5 className="text-xs font-medium mb-2">Area Moods</h5>
                         <div className="flex flex-col gap-2 max-h-60 overflow-y-auto">

@@ -50,7 +50,7 @@ interface MapComponentProps {
   activeLayers: Set<MapLayerId>;
   onFeatureClick: (feature: any) => void;
   onMapLoad: (map: MapRef) => void;
-  mapMode: 'Live' | 'Mood';
+  mapMode: 'Live' | 'Mood' | 'Events';
 }
 
 const severityColorMap = {
@@ -410,6 +410,25 @@ export function MapComponent({
         console.warn("Error setting up Mapbox traffic layer:", err);
       }
     }
+
+    // Update layer visibilities based on mode
+    ['incidents', 'civic-issues', 'events'].forEach(layerId => {
+      const layer = map.getLayer(layerId);
+      if (layer) {
+        if (mapMode === 'Events') {
+          // Only show events layer in Events mode
+          map.setLayoutProperty(layerId, 'visibility', 
+            layerId === 'events' ? 'visible' : 'none');
+        } else if (mapMode === 'Live') {
+          // Show incidents and civic issues in Live mode
+          map.setLayoutProperty(layerId, 'visibility', 
+            layerId === 'events' ? 'none' : 'visible');
+        } else {
+          // Hide all these layers in Mood mode
+          map.setLayoutProperty(layerId, 'visibility', 'none');
+        }
+      }
+    });
   }, [mapMode]);
 
   const onInternalLoad = () => {
@@ -425,6 +444,7 @@ export function MapComponent({
 
   const showSentimentLayer = activeLayers.has("sentiment") && mapMode === 'Mood';
   const showTrafficLayer = activeLayers.has("traffic") && mapMode === 'Live';
+  const showEventsLayer = activeLayers.has("events") && mapMode === 'Events';
   const hasValidPolygons = areaMoodsGeoJSON.features.length > 0;
 
   return (
