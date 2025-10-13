@@ -4,8 +4,7 @@ import * as React from 'react';
 import Map, { Layer, MapLayerMouseEvent, Source, ViewState, NavigationControl, GeolocateControl } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { MapRef } from 'react-map-gl';
-import type { Incident, CivicIssue, Event, MapLayerId } from '@/lib/types';
-import { LngLatBounds } from 'mapbox-gl';
+import type { Incident, CivicIssue, Event, MapLayerId, TrafficData, SentimentData } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle } from 'lucide-react';
 
@@ -13,11 +12,15 @@ import { AlertTriangle } from 'lucide-react';
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
 type GeoJSONSourceData = GeoJSON.FeatureCollection<GeoJSON.Point, Incident | CivicIssue | Event>;
+type TrafficGeoJSON = GeoJSON.FeatureCollection<GeoJSON.LineString, { congestionLevel: number }>;
+type SentimentGeoJSON = GeoJSON.FeatureCollection<GeoJSON.Polygon, { score: number }>;
 
 interface MapComponentProps {
   incidents: Incident[];
   civicIssues: CivicIssue[];
   events: Event[];
+  traffic: TrafficData[];
+  sentiment: SentimentData[];
   activeLayers: Set<MapLayerId>;
   onFeatureClick: (feature: any) => void;
   onMapLoad: (map: MapRef) => void;
@@ -31,16 +34,45 @@ const severityColorMap = {
 };
 
 // This converts your data into a GeoJSON format that Mapbox can read
-const toGeoJSON = (items: (Incident | CivicIssue | Event)[], idPrefix: string): GeoJSONSourceData => ({
+const toGeoJSON = (items: (Incident | CivicIssue | Event)[]): GeoJSONSourceData => ({
     type: 'FeatureCollection',
     features: items.map(item => ({
         type: 'Feature',
         geometry: item.location,
-        properties: { ...item, id: `${idPrefix}-${item.id}` },
+        properties: item,
     })),
 });
 
-export function MapComponent({ incidents, civicIssues, events, activeLayers, onFeatureClick, onMapLoad }: MapComponentProps) {
+const trafficToGeoJSON = (items: TrafficData[]): TrafficGeoJSON => ({
+    type: 'FeatureCollection',
+    features: items.map(item => ({
+        type: 'Feature',
+        geometry: {
+            type: 'LineString',
+            coordinates: item.coordinates,
+        },
+        properties: {
+            congestionLevel: item.congestionLevel,
+        },
+    })),
+});
+
+const sentimentToGeoJSON = (items: SentimentData[]): SentimentGeoJSON => ({
+    type: 'FeatureCollection',
+    features: items.map(item => ({
+        type: 'Feature',
+        geometry: {
+            type: 'Polygon',
+            coordinates: item.polygon,
+        },
+        properties: {
+            score: item.score,
+        },
+    })),
+});
+
+
+export function MapComponent({ incidents, civicIssues, events, traffic, sentiment, activeLayers, onFeatureClick, onMapLoad }: MapComponentProps) {
     const mapRef = React.useRef<MapRef>(null);
 
     if (!MAPBOX_TOKEN || MAPBOX_TOKEN === 'YOUR_MAPBOX_TOKEN_HERE') {
@@ -70,9 +102,11 @@ export function MapComponent({ incidents, civicIssues, events, activeLayers, onF
         pitch: 45,
     };
 
-    const incidentsSource = React.useMemo(() => toGeoJSON(incidents, 'inc'), [incidents]);
-    const civicIssuesSource = React.useMemo(() => toGeoJSON(civicIssues, 'civ'), [civicIssues]);
-    const eventsSource = React.useMemo(() => toGeoJSON(events, 'evt'), [events]);
+    const incidentsSource = React.useMemo(() => toGeoJSON(incidents), [incidents]);
+    const civicIssuesSource = React.useMemo(() => toGeoJSON(civicIssues), [civicIssues]);
+    const eventsSource = React.useMemo(() => toGeoJSON(events), [events]);
+    const trafficSource = React.useMemo(() => trafficToGeoJSON(traffic), [traffic]);
+    const sentimentSource = React.useMemo(() => sentimentToGeoJSON(sentiment), [sentiment]);
 
     const handleFeatureClick = (event: MapLayerMouseEvent) => {
         if (event.features && event.features.length > 0) {
@@ -96,16 +130,8 @@ export function MapComponent({ incidents, civicIssues, events, activeLayers, onF
                  const properties = feature.properties;
                  // Mapbox stringifies nested properties, so we need to parse them.
                  // This is a common issue when passing complex objects as properties.
-                 const incidentData = properties?.type ? properties : JSON.parse(properties?.data || '{}');
-                 onFeatureClick(incidentData);
-
-                // Add a popup
-                const coordinates = (feature.geometry as GeoJSON.Point).coordinates.slice() as [number, number];
-                const description = properties?.description || 'No description available.';
-
-                while (Math.abs(event.lngLat.lng - coordinates[0]) > 180) {
-                    coordinates[0] += event.lngLat.lng > coordinates[0] ? 360 : -360;
-                }
+                 const featureData = properties?.type ? properties : JSON.parse(properties?.data || '{}');
+                 onFeatureClick(featureData);
             }
         }
     };
@@ -123,7 +149,7 @@ export function MapComponent({ incidents, civicIssues, events, activeLayers, onF
             initialViewState={initialViewState}
             style={{ width: '100%', height: '100%' }}
             mapStyle="mapbox://styles/mapbox/dark-v11"
-            interactiveLayerIds={['unclustered-incidents', 'clusters', 'civic-issue-points', 'event-points']}
+            interactiveLayerIds={['unclustered-incidents', 'clusters', 'civic-issue-points', 'event-points', 'sentiment-fill']}
             onClick={handleFeatureClick}
             onLoad={onInternalLoad}
         >
@@ -255,6 +281,61 @@ export function MapComponent({ incidents, civicIssues, events, activeLayers, onF
                         }}
                         paint={{
                            'icon-color': "#FFD166" // Minor severity color
+                        }}
+                    />
+                </Source>
+            )}
+
+            {activeLayers.has('traffic') && (
+                <Source id="traffic" type="geojson" data={trafficSource}>
+                    <Layer
+                        id="traffic-lines"
+                        type="line"
+                        source="traffic"
+                        layout={{
+                            'line-join': 'round',
+                            'line-cap': 'round',
+                        }}
+                        paint={{
+                            'line-width': 4,
+                            'line-color': [
+                                'interpolate',
+                                ['linear'],
+                                ['get', 'congestionLevel'],
+                                0, '#39FF14', // Low congestion (Green)
+                                0.5, '#FFFF00', // Medium (Yellow)
+                                1, '#FF4500'  // High (Red)
+                            ],
+                            'line-opacity': 0.7,
+                        }}
+                    />
+                </Source>
+            )}
+
+            {activeLayers.has('sentiment') && (
+                 <Source id="sentiment" type="geojson" data={sentimentSource}>
+                    <Layer
+                        id="sentiment-fill"
+                        type="fill"
+                        source="sentiment"
+                        paint={{
+                           'fill-color': [
+                                'interpolate',
+                                ['linear'],
+                                ['get', 'score'],
+                                -1, '#FF4D6D', // Negative sentiment (Red)
+                                0, '#0A1428', // Neutral (Background color, transparent)
+                                1, '#1AC6C6'  // Positive sentiment (Teal)
+                           ],
+                           'fill-opacity': 0.3,
+                           'fill-outline-color': [
+                                'interpolate',
+                                ['linear'],
+                                ['get', 'score'],
+                                -1, '#FF4D6D',
+                                0, 'transparent',
+                                1, '#1AC6C6'
+                           ]
                         }}
                     />
                 </Source>

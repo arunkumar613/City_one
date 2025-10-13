@@ -6,7 +6,7 @@ import type { MapRef } from 'react-map-gl';
 import { MapComponent } from './map-component';
 import { IncidentSheet } from './incident-sheet';
 import { getAllData } from '@/lib/data';
-import type { Incident, CivicIssue, Event, MapLayer, MapLayerId, MapMode, Severity } from '@/lib/types';
+import type { Incident, CivicIssue, Event, MapLayer, MapLayerId, MapMode, Severity, TrafficData, SentimentData } from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,7 +40,7 @@ export function MapDashboard() {
     const [mapRef, setMapRef] = React.useState<MapRef | null>(null);
 
     // State Management
-    const [activeLayers, setActiveLayers] = React.useState<Set<MapLayerId>>(() => new Set(['incidents', 'civic-issues']));
+    const [activeLayers, setActiveLayers] = React.useState<Set<MapLayerId>>(() => new Set(['incidents', 'civic-issues', 'traffic', 'sentiment']));
     const [mapMode, setMapMode] = React.useState<MapMode>('Live');
     const [selectedFeature, setSelectedFeature] = React.useState<Feature | null>(null);
     const [isSheetOpen, setSheetOpen] = React.useState(false);
@@ -52,6 +52,7 @@ export function MapDashboard() {
 
     // Handlers
     const handleFeatureClick = React.useCallback((feature: any) => {
+        if (feature.score) return; // Don't open sheet for sentiment polygons
         setSelectedFeature(feature);
         setSheetOpen(true);
     }, []);
@@ -97,6 +98,8 @@ export function MapDashboard() {
                     incidents={filteredData.incidents}
                     civicIssues={filteredData.civicIssues}
                     events={filteredData.events}
+                    traffic={filteredData.traffic}
+                    sentiment={filteredData.sentiment}
                     activeLayers={activeLayers}
                     onFeatureClick={handleFeatureClick}
                     onMapLoad={handleMapLoad}
