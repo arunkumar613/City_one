@@ -22,6 +22,7 @@ import type {
 import { MOOD_COLORS } from "@/lib/useAreaMood";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -50,7 +51,7 @@ interface MapComponentProps {
   activeLayers: Set<MapLayerId>;
   onFeatureClick: (feature: any) => void;
   onMapLoad: (map: MapRef) => void;
-  mapMode: 'Live' | 'Mood' | 'Events';
+  mapMode: "Live" | "Mood" | "Events";
 }
 
 const severityColorMap = {
@@ -98,6 +99,16 @@ export function MapComponent({
   mapMode,
 }: MapComponentProps) {
   const mapRef = React.useRef<MapRef>(null);
+  const router = useRouter();
+
+  // navigate to /events when mode switches to Events
+  React.useEffect(() => {
+    if (mapMode === "Events") {
+      // push so browser URL updates and Events page is shown
+      router.push("/events");
+    }
+  }, [mapMode, router]);
+
   const [debugInfo, setDebugInfo] = React.useState<string>("");
 
   // Debug: Log the areaMoods data
@@ -362,8 +373,8 @@ export function MapComponent({
     const map = mapRef.current?.getMap();
     if (!map) return;
 
-    const shouldShowTraffic = mapMode === 'Live';
-    
+    const shouldShowTraffic = mapMode === "Live";
+
     // Clean up existing traffic layers
     if (map.getLayer("mapbox-traffic-layer")) {
       map.removeLayer("mapbox-traffic-layer");
@@ -412,20 +423,26 @@ export function MapComponent({
     }
 
     // Update layer visibilities based on mode
-    ['incidents', 'civic-issues', 'events'].forEach(layerId => {
+    ["incidents", "civic-issues", "events"].forEach((layerId) => {
       const layer = map.getLayer(layerId);
       if (layer) {
-        if (mapMode === 'Events') {
+        if (mapMode === "Events") {
           // Only show events layer in Events mode
-          map.setLayoutProperty(layerId, 'visibility', 
-            layerId === 'events' ? 'visible' : 'none');
-        } else if (mapMode === 'Live') {
+          map.setLayoutProperty(
+            layerId,
+            "visibility",
+            layerId === "events" ? "visible" : "none"
+          );
+        } else if (mapMode === "Live") {
           // Show incidents and civic issues in Live mode
-          map.setLayoutProperty(layerId, 'visibility', 
-            layerId === 'events' ? 'none' : 'visible');
+          map.setLayoutProperty(
+            layerId,
+            "visibility",
+            layerId === "events" ? "none" : "visible"
+          );
         } else {
           // Hide all these layers in Mood mode
-          map.setLayoutProperty(layerId, 'visibility', 'none');
+          map.setLayoutProperty(layerId, "visibility", "none");
         }
       }
     });
@@ -442,9 +459,10 @@ export function MapComponent({
     }
   };
 
-  const showSentimentLayer = activeLayers.has("sentiment") && mapMode === 'Mood';
-  const showTrafficLayer = activeLayers.has("traffic") && mapMode === 'Live';
-  const showEventsLayer = activeLayers.has("events") && mapMode === 'Events';
+  const showSentimentLayer =
+    activeLayers.has("sentiment") && mapMode === "Mood";
+  const showTrafficLayer = activeLayers.has("traffic") && mapMode === "Live";
+  const showEventsLayer = activeLayers.has("events") && mapMode === "Events";
   const hasValidPolygons = areaMoodsGeoJSON.features.length > 0;
 
   return (
@@ -687,8 +705,6 @@ export function MapComponent({
           </Source>
         )}
       </Map>
-
-
     </div>
   );
 }
