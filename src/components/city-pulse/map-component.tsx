@@ -101,11 +101,17 @@ export function MapComponent({
   const mapRef = React.useRef<MapRef>(null);
   const router = useRouter();
 
-  // navigate to /events when mode switches to Events
+  // navigate to appropriate page when mode switches
   React.useEffect(() => {
     if (mapMode === "Events") {
       // push so browser URL updates and Events page is shown
       router.push("/events");
+    } else if (mapMode === "EVHubs") {
+      // push to EV Hubs page
+      router.push("/ev-hubs");
+    } else if (mapMode === "Mood") {
+      // push to Mood page
+      router.push("/mood");
     }
   }, [mapMode, router]);
 
@@ -463,6 +469,7 @@ export function MapComponent({
     activeLayers.has("sentiment") && mapMode === "Mood";
   const showTrafficLayer = activeLayers.has("traffic") && mapMode === "Live";
   const showEventsLayer = activeLayers.has("events") && mapMode === "Events";
+  const showEVHubsLayer = mapMode === "EVHubs";
   const hasValidPolygons = areaMoodsGeoJSON.features.length > 0;
 
   return (

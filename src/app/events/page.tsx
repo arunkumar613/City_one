@@ -276,7 +276,7 @@ export default function EventsPage() {
           const ne: [number, number] = [Math.max(...lngs), Math.max(...lats)];
 
           mapRef.current.getMap().fitBounds([sw, ne], {
-            padding: { top: 120, bottom: 50, left: 50, right: 350 },
+            padding: { top: 120, bottom: 50, left: 350, right: 50 },
             duration: 2000,
           });
         } catch (e) {
@@ -303,10 +303,10 @@ export default function EventsPage() {
 
   if (loading) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-gray-50">
+      <div className="h-screen w-full flex items-center justify-center bg-black/80 backdrop-blur-md z-10">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading events...</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-500 mx-auto mb-3"></div>
+          <p className="text-cyan-100 font-medium">Loading events...</p>
         </div>
       </div>
     );
@@ -327,24 +327,35 @@ export default function EventsPage() {
 
   return (
     <div className="h-screen w-full relative">
+      {/* Events counter badge */}
+      {!loading && (
+        <div className="absolute top-4 left-4 bg-black/80 backdrop-blur-md rounded-lg p-3 shadow-lg border border-gray-800">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-cyan-500 rounded-full animate-pulse"></div>
+            <span className="font-semibold text-white">
+              {events.length} Events
+            </span>
+          </div>
+        </div>
+      )}
       {/* Events Sidebar */}
-      <div className="absolute top-24 left-4 z-10 bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl border border-gray-200 w-80 max-h-[calc(100vh-140px)] overflow-hidden">
-        <div className="p-4 border-b border-gray-200">
-          <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-purple-600" />
+      <div className="absolute top-24 right-4 z-10 bg-black/80 backdrop-blur-md rounded-xl shadow-2xl border border-gray-800 w-80 max-h-[calc(100vh-140px)] overflow-hidden">
+        <div className="p-4 border-b border-gray-800 bg-gradient-to-r from-purple-900/50 to-blue-900/50">
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-cyan-400" />
             Upcoming Events
           </h2>
         </div>
         <div className="overflow-y-auto max-h-[calc(100vh-200px)]">
           {events.length === 0 ? (
-            <div className="p-4 text-center text-gray-500">No events found</div>
+            <div className="p-4 text-center text-gray-400">No events found</div>
           ) : (
             events.map((event) => (
               <div
                 key={event.id}
-                className={`p-4 border-b border-gray-100 hover:bg-purple-50 cursor-pointer transition-colors ${
+                className={`p-4 border-b border-gray-800 hover:bg-gray-900/50 cursor-pointer transition-all duration-200 ${
                   selectedEvent?.id === event.id
-                    ? "bg-purple-100 border-l-4 border-l-purple-600"
+                    ? "bg-gray-800/70 border-l-4 border-l-cyan-500"
                     : ""
                 }`}
                 onClick={() => {
@@ -359,14 +370,14 @@ export default function EventsPage() {
                 }}
               >
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg shadow-cyan-500/20">
                     <Calendar className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-800 truncate">
+                    <h3 className="font-semibold text-white truncate">
                       {event.event_name}
                     </h3>
-                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                    <p className="text-sm text-gray-300 mt-1 line-clamp-2">
                       {event.event_description}
                     </p>
                     <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
@@ -473,15 +484,15 @@ export default function EventsPage() {
               transform: "translate(-50%, -50%)",
             }}
           >
-            <div className="bg-white rounded-xl shadow-2xl border border-gray-200 max-w-sm overflow-hidden">
+            <div className="bg-black/90 backdrop-blur-md rounded-xl shadow-2xl border border-gray-800 max-w-sm overflow-hidden">
               {/* Header with gradient */}
-              <div className="bg-gradient-to-r from-purple-600 to-blue-600 p-4 text-white">
+              <div className="bg-gradient-to-r from-cyan-600 to-blue-800 p-4 text-white">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <h3 className="font-bold text-lg leading-tight">
                       {selectedEvent.event_name}
                     </h3>
-                    <div className="flex items-center gap-2 mt-1 text-purple-100">
+                    <div className="flex items-center gap-2 mt-1 text-cyan-100">
                       <Calendar className="w-4 h-4" />
                       <span className="text-sm">
                         {new Date(selectedEvent.created_at).toLocaleDateString(
@@ -498,7 +509,7 @@ export default function EventsPage() {
                   </div>
                   <button
                     onClick={closePopup}
-                    className="flex-shrink-0 w-6 h-6 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                    className="flex-shrink-0 w-6 h-6 rounded-full bg-black/30 hover:bg-black/50 flex items-center justify-center transition-all duration-200"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -507,13 +518,13 @@ export default function EventsPage() {
 
               {/* Content */}
               <div className="p-4">
-                <p className="text-gray-700 leading-relaxed">
+                <p className="text-gray-300 leading-relaxed">
                   {selectedEvent.event_description}
                 </p>
 
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <MapPin className="w-4 h-4 text-purple-600" />
+                <div className="mt-4 pt-4 border-t border-gray-800">
+                  <div className="flex items-center gap-2 text-sm text-gray-300">
+                    <MapPin className="w-4 h-4 text-cyan-500" />
                     <span>Event Location</span>
                   </div>
 
@@ -531,14 +542,14 @@ export default function EventsPage() {
                           });
                         }
                       }}
-                      className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1"
+                      className="flex-1 bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-500 hover:to-blue-600 text-white py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-1 shadow-lg shadow-cyan-500/20"
                     >
                       <MapPin className="w-4 h-4" />
                       Zoom In
                     </button>
                     <button
                       onClick={closePopup}
-                      className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors"
+                      className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200"
                     >
                       Close
                     </button>

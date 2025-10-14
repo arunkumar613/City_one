@@ -13,7 +13,20 @@ export default function Home() {
   return (
     <div className="h-screen w-screen overflow-hidden">
       <nav style={{ position: "absolute", top: 16, right: 16, zIndex: 2000 }}>
-        {/* Events link removed */}
+        <div className="flex gap-2">
+          <Link 
+            href="/events" 
+            className="px-3 py-1.5 bg-black/70 hover:bg-black/90 text-white text-sm rounded-lg transition-colors duration-200 backdrop-blur-sm"
+          >
+            Events
+          </Link>
+          <Link 
+            href="/ev-hubs" 
+            className="px-3 py-1.5 bg-green-600/70 hover:bg-green-600/90 text-white text-sm rounded-lg transition-colors duration-200 backdrop-blur-sm"
+          >
+            EV Hubs
+          </Link>
+        </div>
       </nav>
       <MapDashboard />
     </div>
