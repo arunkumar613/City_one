@@ -3,8 +3,9 @@ import civicIssuesData from './mock/civic-issues.json';
 import eventsData from './mock/events.json';
 import trafficData from './mock/traffic.json';
 import sentimentData from './mock/sentiment.json';
+import evHubsData from './mock/ev-hubs.json';
 
-import type { Incident, CivicIssue, Event, TrafficData, SentimentData } from './types';
+import type { Incident, CivicIssue, Event, TrafficData, SentimentData, EvHub } from './types';
 
 // In a real app, these would be API calls.
 // For this frontend-only demo, we're importing JSON files.
@@ -27,10 +28,13 @@ export const getTrafficData = (): TrafficData[] => trafficData as TrafficData[];
 
 export const getSentimentData = (): SentimentData[] => sentimentData as SentimentData[];
 
+export const getEvHubs = (): EvHub[] => evHubsData as EvHub[];
+
 export const getAllData = () => ({
     incidents: getIncidents(),
     civicIssues: getCivicIssues(),
     events: getEvents(),
     traffic: getTrafficData(),
     sentiment: getSentimentData(),
+    evHubs: getEvHubs(),
 });

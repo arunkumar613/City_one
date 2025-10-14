@@ -15,6 +15,7 @@ import type {
   Incident,
   CivicIssue,
   Event,
+  EvHub,
   MapLayerId,
   TrafficData,
   SentimentData,
@@ -28,7 +29,7 @@ const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
 type GeoJSONSourceData = GeoJSON.FeatureCollection<
   GeoJSON.Point,
-  Incident | CivicIssue | Event
+  Incident | CivicIssue | Event | EvHub
 >;
 type TrafficGeoJSON = GeoJSON.FeatureCollection<
   GeoJSON.LineString,
@@ -39,6 +40,7 @@ interface MapComponentProps {
   incidents: Incident[];
   civicIssues: CivicIssue[];
   events: Event[];
+  evHubs?: any[];
   traffic: TrafficData[];
   sentiment: SentimentData[];
   areaMoods?: {
@@ -90,6 +92,7 @@ export function MapComponent({
   incidents,
   civicIssues,
   events,
+  evHubs,
   traffic,
   sentiment,
   areaMoods = [],
@@ -103,10 +106,9 @@ export function MapComponent({
 
   // navigate to /events when mode switches to Events
   React.useEffect(() => {
-    if (mapMode === "Events") {
-      // push so browser URL updates and Events page is shown
-      router.push("/events");
-    }
+    // Previously this switched to a dedicated /events route. We want
+    // Events to render inline in the dashboard, so no navigation here.
+    // Keep effect available for future side-effects if needed.
   }, [mapMode, router]);
 
   const [debugInfo, setDebugInfo] = React.useState<string>("");
@@ -277,10 +279,9 @@ export function MapComponent({
 
     console.log(`Created ${features.length} valid features`);
     features.forEach((f) => {
+      const sentimentKey = f.properties.sentiment as keyof typeof MOOD_COLORS;
       console.log(
-        `Feature: ${f.properties.area} | Sentiment: "${
-          f.properties.sentiment
-        }" | Has Color: ${!!MOOD_COLORS[f.properties.sentiment]}`
+        `Feature: ${f.properties.area} | Sentiment: "${f.properties.sentiment}" | Has Color: ${!!MOOD_COLORS[sentimentKey]}`
       );
     });
 
@@ -330,6 +331,7 @@ export function MapComponent({
     [civicIssues]
   );
   const eventsSource = React.useMemo(() => toGeoJSON(events), [events]);
+  const evHubsSource = React.useMemo(() => toGeoJSON(evHubs || []), [evHubs]);
   const trafficSource = React.useMemo(
     () => trafficToGeoJSON(traffic),
     [traffic]
@@ -422,30 +424,25 @@ export function MapComponent({
       }
     }
 
-    // Update layer visibilities based on mode
-    ["incidents", "civic-issues", "events"].forEach((layerId) => {
-      const layer = map.getLayer(layerId);
-      if (layer) {
-        if (mapMode === "Events") {
-          // Only show events layer in Events mode
-          map.setLayoutProperty(
-            layerId,
-            "visibility",
-            layerId === "events" ? "visible" : "none"
-          );
-        } else if (mapMode === "Live") {
-          // Show incidents and civic issues in Live mode
-          map.setLayoutProperty(
-            layerId,
-            "visibility",
-            layerId === "events" ? "none" : "visible"
-          );
-        } else {
-          // Hide all these layers in Mood mode
-          map.setLayoutProperty(layerId, "visibility", "none");
+    // Update layer visibilities based on mode using the actual layer ids
+  const incidentLayerIds = ["clusters", "cluster-count", "unclustered-incidents"];
+  const civicLayerIds = ["civic-issue-points"];
+  const eventLayerIds = ["event-pulse", "event-circles", "event-points"];
+  const evHubLayerIds = ["evhub-points", "evhub-circle"];
+
+    const setVisibility = (ids: string[], visible: boolean) => {
+      ids.forEach((id) => {
+        if (map.getLayer(id)) {
+          map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
         }
-      }
-    });
+      });
+    };
+
+    // Respect activeLayers for visibility instead of rigid mapMode-only rules
+    setVisibility(incidentLayerIds, activeLayers.has('incidents'));
+    setVisibility(civicLayerIds, activeLayers.has('civic-issues'));
+    setVisibility(eventLayerIds, activeLayers.has('events'));
+    setVisibility(evHubLayerIds, activeLayers.has('ev-hubs'));
   }, [mapMode]);
 
   const onInternalLoad = () => {
@@ -476,8 +473,13 @@ export function MapComponent({
         interactiveLayerIds={[
           "unclustered-incidents",
           "clusters",
+          "cluster-count",
           "civic-issue-points",
           "event-points",
+          "event-circles",
+          "event-pulse",
+          "evhub-points",
+          "evhub-circle",
           ...(showSentimentLayer ? ["area-moods-fill"] : []),
         ]}
         onClick={handleFeatureClick}
@@ -562,6 +564,41 @@ export function MapComponent({
           </Source>
         )}
 
+        {/* EV Hubs Layer */}
+        {activeLayers.has("events") && evHubsSource.features.length > 0 && (
+          <Source id="ev-hubs" type="geojson" data={evHubsSource}>
+            <Layer
+              id="evhub-circle"
+              type="circle"
+              source="ev-hubs"
+              paint={{
+                "circle-radius": 8,
+                "circle-color": [
+                  "case",
+                  ["==", ["get", "status"], "available"],
+                  "#16a34a",
+                  ["==", ["get", "status"], "busy"],
+                  "#f59e0b",
+                  "#ef4444",
+                ],
+                "circle-stroke-color": "#ffffff",
+                "circle-stroke-width": 1,
+                "circle-opacity": 0.95,
+              }}
+            />
+            <Layer
+              id="evhub-points"
+              type="symbol"
+              source="ev-hubs"
+              layout={{
+                "icon-image": "marker-15",
+                "icon-size": 1.2,
+                "icon-allow-overlap": true,
+              }}
+            />
+          </Source>
+        )}
+
         {/* Civic Issues Layer */}
         {activeLayers.has("civic-issues") && (
           <Source id="civic-issues" type="geojson" data={civicIssuesSource}>
@@ -594,6 +631,32 @@ export function MapComponent({
         {/* Events Layer */}
         {activeLayers.has("events") && (
           <Source id="events" type="geojson" data={eventsSource}>
+            {/* Pulsing faint circle for attention */}
+            <Layer
+              id="event-pulse"
+              type="circle"
+              source="events"
+              paint={{
+                "circle-radius": ["interpolate", ["linear"], ["get", "predictedDensity"], 0, 6, 1, 24],
+                "circle-color": "#8B5CF6",
+                "circle-opacity": 0.18,
+              }}
+            />
+
+            {/* Decorative outer circle */}
+            <Layer
+              id="event-circles"
+              type="circle"
+              source="events"
+              paint={{
+                "circle-radius": ["interpolate", ["linear"], ["get", "predictedDensity"], 0, 8, 1, 28],
+                "circle-color": "#8B5CF6",
+                "circle-stroke-color": "#ffffff",
+                "circle-stroke-width": 1.5,
+                "circle-opacity": 0.9,
+              }}
+            />
+
             <Layer
               id="event-points"
               type="symbol"

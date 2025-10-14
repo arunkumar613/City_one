@@ -6,7 +6,8 @@ import type { MapRef } from 'react-map-gl';
 import { MapComponent } from './map-component';
 import { IncidentSheet } from './incident-sheet';
 import { useAreaMood, MOOD_COLORS } from '@/lib/useAreaMood';
-import type { Incident, CivicIssue, Event, MapLayer, MapLayerId, MapMode, Severity, TrafficData, SentimentData, AreaMood } from '@/lib/types';
+import { getAllData } from '@/lib/data';
+import type { Incident, CivicIssue, Event, EvHub, MapLayer, MapLayerId, MapMode, Severity, TrafficData, SentimentData } from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +28,7 @@ const ALL_LAYERS: MapLayer[] = [
     { id: 'incidents', name: 'Incidents' },
     { id: 'civic-issues', name: 'Civic Issues' },
     { id: 'events', name: 'Events' },
+    { id: 'ev-hubs', name: 'EV Hubs' },
     { id: 'traffic', name: 'Traffic' },
     { id: 'sentiment', name: 'Sentiment' },
 ];
@@ -46,8 +48,9 @@ export function MapDashboard() {
 
     // State Management
     const [mapMode, setMapMode] = React.useState<MapMode>('Live');
-    const activeLayers = React.useMemo(() => {
-        switch (mapMode) {
+    // activeLayers is state now so UI controls can toggle it
+    const [activeLayers, setActiveLayers] = React.useState<Set<MapLayerId>>(() => {
+        switch ('Live' as MapMode) {
             case 'Live':
                 return new Set<MapLayerId>(['traffic']);
             case 'Events':
@@ -56,6 +59,23 @@ export function MapDashboard() {
                 return new Set<MapLayerId>(['sentiment']);
             default:
                 return new Set<MapLayerId>();
+        }
+    });
+
+    // Keep active layer defaults in sync when mapMode changes
+    React.useEffect(() => {
+        switch (mapMode) {
+            case 'Live':
+                setActiveLayers(new Set<MapLayerId>(['traffic']));
+                break;
+            case 'Events':
+                setActiveLayers(new Set<MapLayerId>(['events']));
+                break;
+            case 'Mood':
+                setActiveLayers(new Set<MapLayerId>(['sentiment']));
+                break;
+            default:
+                setActiveLayers(new Set<MapLayerId>());
         }
     }, [mapMode]);
     const [selectedFeature, setSelectedFeature] = React.useState<Feature | null>(null);
@@ -163,18 +183,19 @@ export function MapDashboard() {
                         </div>
                     </div>
                 ) : (
-                    <MapComponent
-                        incidents={[]}
-                        civicIssues={[]}
-                        events={[]}
-                        traffic={[]}
-                        sentiment={[]}
-                        areaMoods={displayAreaMoods}
-                        activeLayers={activeLayers}
-                        onFeatureClick={handleFeatureClick}
-                        onMapLoad={handleMapLoad}
-                        mapMode={mapMode}
-                    />
+                                                        <MapComponent
+                                                            incidents={getAllData().incidents}
+                                                            civicIssues={getAllData().civicIssues}
+                                                            events={getAllData().events}
+                                                            traffic={getAllData().traffic}
+                                                            sentiment={getAllData().sentiment}
+                                                            areaMoods={displayAreaMoods}
+                                                            activeLayers={activeLayers}
+                                                            onFeatureClick={handleFeatureClick}
+                                                            onMapLoad={handleMapLoad}
+                                                            mapMode={mapMode}
+                                                            evHubs={getAllData().evHubs}
+                                                        />
                 )}
 
                 {/* Top Header Controls */}
@@ -269,6 +290,67 @@ export function MapDashboard() {
                         </div>
                     </div>
                 )}
+
+                {/* Events + EV Hubs Panel (top-right) */}
+                <div className="fixed right-4 top-20 z-20 bg-card/80 backdrop-blur-sm p-3 rounded-lg border border-border/50 shadow-md w-80 max-h-[calc(100vh-160px)] overflow-hidden">
+                    <h5 className="text-sm font-medium mb-2">Events & EV Hubs</h5>
+                    <div className="overflow-y-auto max-h-[calc(100vh-200px)] space-y-3">
+                        {/* Events Section */}
+                        <div>
+                            <div className="text-xs text-muted-foreground mb-2">Events</div>
+                            <div className="space-y-2">
+                                {getAllData().events.length === 0 ? (
+                                    <div className="text-xs text-muted-foreground">No events</div>
+                                ) : (
+                                    getAllData().events.map((ev: any) => {
+                                        const name = ev.event_name ?? ev.name ?? ev.title ?? 'Event';
+                                        const desc = ev.event_description ?? ev.description ?? ev.venue ?? '';
+                                        const coords = ev.location?.coordinates;
+                                        return (
+                                            <div key={ev.id} className="p-2 border border-border/10 rounded-md hover:bg-accent/5 cursor-pointer" onClick={() => {
+                                                const m = mapRef?.getMap?.();
+                                                if (m && coords) {
+                                                    m.flyTo({ center: coords, zoom: 14, essential: true });
+                                                }
+                                            }}>
+                                                <div className="font-medium text-sm">{name}</div>
+                                                {desc && <div className="text-xs text-muted-foreground truncate">{desc}</div>}
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="border-t border-border/20 pt-2">
+                            <div className="text-xs text-muted-foreground mb-2">EV Charging Hubs</div>
+                            <div className="space-y-2">
+                                {getAllData().evHubs.length === 0 ? (
+                                    <div className="text-xs text-muted-foreground">No EV hubs</div>
+                                ) : (
+                                    getAllData().evHubs.map((hub: EvHub) => (
+                                        <div key={hub.id} className="p-2 border border-border/10 rounded-md hover:bg-accent/5 cursor-pointer" onClick={() => {
+                                            const m = mapRef?.getMap?.();
+                                            if (m && hub.location && hub.location.coordinates) {
+                                                m.flyTo({ center: hub.location.coordinates, zoom: 15, essential: true });
+                                            }
+                                        }}>
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <div className="font-medium text-sm">{hub.name}</div>
+                                                    <div className="text-xs text-muted-foreground">{hub.availablePorts} / {hub.capacity} ports</div>
+                                                </div>
+                                                <div>
+                                                    <span className={`px-2 py-1 rounded-full text-xs ${hub.status === 'available' ? 'bg-green-100 text-green-700' : hub.status === 'busy' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{hub.status}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 {/* Details Sheet */}
                 <IncidentSheet

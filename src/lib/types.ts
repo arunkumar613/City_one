@@ -35,6 +35,15 @@ export interface Event {
   location: GeoJSONPoint;
 }
 
+export interface EvHub {
+  id: string;
+  name: string;
+  capacity: number;
+  availablePorts: number;
+  status: 'available' | 'busy' | 'offline';
+  location: GeoJSONPoint;
+}
+
 export interface TrafficData {
   roadId: string;
   congestionLevel: number; // 0-1
@@ -47,7 +56,7 @@ export interface SentimentData {
   polygon: number[][][];
 }
 
-export type MapLayerId = 'traffic' | 'incidents' | 'civic-issues' | 'events' | 'sentiment';
+export type MapLayerId = 'traffic' | 'incidents' | 'civic-issues' | 'events' | 'sentiment' | 'ev-hubs';
 
 export type MapLayer = {
   id: MapLayerId;
