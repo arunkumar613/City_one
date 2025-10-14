@@ -44,44 +44,9 @@ export function MapDashboard() {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [isSearching, setIsSearching] = React.useState(false);
 
-    // State Management with localStorage persistence
-    const [mapMode, setMapMode] = React.useState<MapMode>(() => {
-        if (typeof window !== 'undefined') {
-            const savedMode = localStorage.getItem('mapMode');
-            return (savedMode as MapMode) || 'Live';
-        }
-        return 'Live';
-    });
-    
-    // Save mapMode to localStorage when it changes
-    React.useEffect(() => {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('mapMode', mapMode);
-        }
-    }, [mapMode]);
-    
-    const [manualActiveLayers, setManualActiveLayers] = React.useState<Set<MapLayerId>>(() => {
-        if (typeof window !== 'undefined') {
-            const savedLayers = localStorage.getItem('activeLayers');
-            return savedLayers ? new Set(JSON.parse(savedLayers)) : new Set<MapLayerId>();
-        }
-        return new Set<MapLayerId>();
-    });
-    
-    // Save activeLayers to localStorage when it changes
-    React.useEffect(() => {
-        if (typeof window !== 'undefined' && manualActiveLayers.size > 0) {
-            localStorage.setItem('activeLayers', JSON.stringify(Array.from(manualActiveLayers)));
-        }
-    }, [manualActiveLayers]);
-    
+    // State Management
+    const [mapMode, setMapMode] = React.useState<MapMode>('Live');
     const activeLayers = React.useMemo(() => {
-        // If we have manually toggled layers, use those
-        if (manualActiveLayers.size > 0) {
-            return manualActiveLayers;
-        }
-        
-        // Otherwise use defaults based on mode
         switch (mapMode) {
             case 'Live':
                 return new Set<MapLayerId>(['traffic']);
@@ -92,7 +57,7 @@ export function MapDashboard() {
             default:
                 return new Set<MapLayerId>();
         }
-    }, [mapMode, manualActiveLayers]);
+    }, [mapMode]);
     const [selectedFeature, setSelectedFeature] = React.useState<Feature | null>(null);
     const [isSheetOpen, setSheetOpen] = React.useState(false);
     const [isSearchFocused, setSearchFocused] = React.useState(false);
@@ -162,10 +127,8 @@ export function MapDashboard() {
     }, [mapRef, toast]);
 
     const toggleLayer = (layerId: MapLayerId) => {
-        setManualActiveLayers(prev => {
-            // Start with current active layers if this is first manual toggle
-            const newLayers = prev.size === 0 ? new Set(activeLayers) : new Set(prev);
-            
+        setActiveLayers(prev => {
+            const newLayers = new Set(prev);
             if (newLayers.has(layerId)) {
                 newLayers.delete(layerId);
             } else {
@@ -248,13 +211,7 @@ export function MapDashboard() {
                         <ToggleGroup
                             type="single"
                             value={mapMode}
-                            onValueChange={(value: MapMode) => {
-                                if (value) {
-                                    setMapMode(value);
-                                    // Reset manual layers when changing modes
-                                    setManualActiveLayers(new Set());
-                                }
-                            }}
+                            onValueChange={(value: MapMode) => value && setMapMode(value)}
                             className="relative z-10 flex gap-1"
                         >
                             <ToggleGroupItem 
@@ -281,14 +238,6 @@ export function MapDashboard() {
                                 data-[state=off]:text-muted-foreground hover:text-primary-foreground"
                             >
                                 Mood Map
-                            </ToggleGroupItem>
-                            <ToggleGroupItem 
-                                value="EVHubs" 
-                                className="relative px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                                data-[state=on]:bg-primary/20 data-[state=on]:text-primary-foreground data-[state=on]:shadow-inner
-                                data-[state=off]:text-muted-foreground hover:text-primary-foreground"
-                            >
-                                EV Hubs
                             </ToggleGroupItem>
                         </ToggleGroup>
                         <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent opacity-50"></div>
