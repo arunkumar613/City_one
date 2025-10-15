@@ -36,7 +36,7 @@ type TrafficGeoJSON = GeoJSON.FeatureCollection<
   { congestionLevel: number }
 >;
 
-interface MapComponentProps {
+type MapComponentProps = {
   incidents: Incident[];
   civicIssues: CivicIssue[];
   events: Event[];
@@ -50,11 +50,11 @@ interface MapComponentProps {
     description?: string;
     polygon?: any;
   }[];
-  activeLayers: Set<MapLayerId>;
+  activeLayers?: Set<string>;
+  mapMode?: "Live" | "Events" | "Mood" | "EVHubs";
   onFeatureClick: (feature: any) => void;
   onMapLoad: (map: MapRef) => void;
-  mapMode: "Live" | "Mood" | "Events";
-}
+};
 
 const severityColorMap = {
   Critical: "hsl(var(--destructive))",
@@ -281,7 +281,9 @@ export function MapComponent({
     features.forEach((f) => {
       const sentimentKey = f.properties.sentiment as keyof typeof MOOD_COLORS;
       console.log(
-        `Feature: ${f.properties.area} | Sentiment: "${f.properties.sentiment}" | Has Color: ${!!MOOD_COLORS[sentimentKey]}`
+        `Feature: ${f.properties.area} | Sentiment: "${
+          f.properties.sentiment
+        }" | Has Color: ${!!MOOD_COLORS[sentimentKey]}`
       );
     });
 
@@ -425,10 +427,14 @@ export function MapComponent({
     }
 
     // Update layer visibilities based on mode using the actual layer ids
-  const incidentLayerIds = ["clusters", "cluster-count", "unclustered-incidents"];
-  const civicLayerIds = ["civic-issue-points"];
-  const eventLayerIds = ["event-pulse", "event-circles", "event-points"];
-  const evHubLayerIds = ["evhub-points", "evhub-circle"];
+    const incidentLayerIds = [
+      "clusters",
+      "cluster-count",
+      "unclustered-incidents",
+    ];
+    const civicLayerIds = ["civic-issue-points"];
+    const eventLayerIds = ["event-pulse", "event-circles", "event-points"];
+    const evHubLayerIds = ["evhub-points", "evhub-circle"];
 
     const setVisibility = (ids: string[], visible: boolean) => {
       ids.forEach((id) => {
@@ -439,10 +445,10 @@ export function MapComponent({
     };
 
     // Respect activeLayers for visibility instead of rigid mapMode-only rules
-    setVisibility(incidentLayerIds, activeLayers.has('incidents'));
-    setVisibility(civicLayerIds, activeLayers.has('civic-issues'));
-    setVisibility(eventLayerIds, activeLayers.has('events'));
-    setVisibility(evHubLayerIds, activeLayers.has('ev-hubs'));
+    setVisibility(incidentLayerIds, activeLayers.has("incidents"));
+    setVisibility(civicLayerIds, activeLayers.has("civic-issues"));
+    setVisibility(eventLayerIds, activeLayers.has("events"));
+    setVisibility(evHubLayerIds, activeLayers.has("ev-hubs"));
   }, [mapMode]);
 
   const onInternalLoad = () => {
@@ -461,6 +467,100 @@ export function MapComponent({
   const showTrafficLayer = activeLayers.has("traffic") && mapMode === "Live";
   const showEventsLayer = activeLayers.has("events") && mapMode === "Events";
   const hasValidPolygons = areaMoodsGeoJSON.features.length > 0;
+
+  // Ensure ev-hubs source/layers are added only in EVHubs view and removed otherwise.
+  React.useEffect(() => {
+    const m = mapRef?.current?.getMap?.();
+    if (!m) return;
+
+    const circleLayerId = "ev-hub-circles";
+    const symbolLayerId = "ev-hub-points";
+    const sourceId = "ev-hubs";
+
+    const shouldShow = mapMode === "EVHubs" || activeLayers?.has?.("ev-hubs");
+
+    // Helper: remove layers & source if present
+    const removeEvLayers = () => {
+      try {
+        if (m.getLayer(symbolLayerId)) m.removeLayer(symbolLayerId);
+      } catch {}
+      try {
+        if (m.getLayer(circleLayerId)) m.removeLayer(circleLayerId);
+      } catch {}
+      try {
+        if (m.getSource(sourceId)) m.removeSource(sourceId);
+      } catch {}
+    };
+
+    if (!shouldShow) {
+      // remove any existing ev-hubs render
+      removeEvLayers();
+      return;
+    }
+
+    // shouldShow === true -> add or update source + layers
+    // Add source if missing
+    if (!m.getSource(sourceId)) {
+      m.addSource(sourceId, {
+        type: "geojson",
+        data: {
+          type: "FeatureCollection",
+          features: (evHubs || []).map((hub: any) => ({
+            type: "Feature",
+            geometry: hub.location,
+            properties: { ...hub, id: hub.id },
+          })),
+        },
+      });
+    } else {
+      // update data if source exists
+      const src: any = m.getSource(sourceId);
+      try {
+        src.setData({
+          type: "FeatureCollection",
+          features: (evHubs || []).map((hub: any) => ({
+            type: "Feature",
+            geometry: hub.location,
+            properties: { ...hub, id: hub.id },
+          })),
+        });
+      } catch {}
+    }
+
+    // Add layers if missing
+    if (!m.getLayer(circleLayerId)) {
+      m.addLayer({
+        id: circleLayerId,
+        type: "circle",
+        source: sourceId,
+        paint: {
+          "circle-radius": 10,
+          "circle-color": "#10B981",
+          "circle-stroke-width": 1,
+          "circle-stroke-color": "#ffffff",
+        },
+      });
+    }
+
+    if (!m.getLayer(symbolLayerId)) {
+      m.addLayer({
+        id: symbolLayerId,
+        type: "symbol",
+        source: sourceId,
+        layout: {
+          "icon-image": "charging-station-15",
+          "icon-size": 1.2,
+          "icon-allow-overlap": true,
+        },
+      });
+    }
+
+    // cleanup on unmount or when effect dependencies change
+    return () => {
+      // keep layers removed when leaving EVHubs
+      removeEvLayers();
+    };
+  }, [mapMode, activeLayers, evHubs, mapRef]);
 
   return (
     <div className="relative w-full h-full">
@@ -565,39 +665,9 @@ export function MapComponent({
         )}
 
         {/* EV Hubs Layer */}
-        {activeLayers.has("events") && evHubsSource.features.length > 0 && (
-          <Source id="ev-hubs" type="geojson" data={evHubsSource}>
-            <Layer
-              id="evhub-circle"
-              type="circle"
-              source="ev-hubs"
-              paint={{
-                "circle-radius": 8,
-                "circle-color": [
-                  "case",
-                  ["==", ["get", "status"], "available"],
-                  "#16a34a",
-                  ["==", ["get", "status"], "busy"],
-                  "#f59e0b",
-                  "#ef4444",
-                ],
-                "circle-stroke-color": "#ffffff",
-                "circle-stroke-width": 1,
-                "circle-opacity": 0.95,
-              }}
-            />
-            <Layer
-              id="evhub-points"
-              type="symbol"
-              source="ev-hubs"
-              layout={{
-                "icon-image": "marker-15",
-                "icon-size": 1.2,
-                "icon-allow-overlap": true,
-              }}
-            />
-          </Source>
-        )}
+        {/* REMOVED: block that used `activeLayers.has("events")` — this caused EV hubs to render in Events mode.
+            EV hubs are now only rendered by the EVHubs conditional near the bottom of this file:
+            (mapMode === "EVHubs" || activeLayers?.has?.("ev-hubs")) && ... */}
 
         {/* Civic Issues Layer */}
         {activeLayers.has("civic-issues") && (
@@ -637,7 +707,15 @@ export function MapComponent({
               type="circle"
               source="events"
               paint={{
-                "circle-radius": ["interpolate", ["linear"], ["get", "predictedDensity"], 0, 6, 1, 24],
+                "circle-radius": [
+                  "interpolate",
+                  ["linear"],
+                  ["get", "predictedDensity"],
+                  0,
+                  6,
+                  1,
+                  24,
+                ],
                 "circle-color": "#8B5CF6",
                 "circle-opacity": 0.18,
               }}
@@ -649,7 +727,15 @@ export function MapComponent({
               type="circle"
               source="events"
               paint={{
-                "circle-radius": ["interpolate", ["linear"], ["get", "predictedDensity"], 0, 8, 1, 28],
+                "circle-radius": [
+                  "interpolate",
+                  ["linear"],
+                  ["get", "predictedDensity"],
+                  0,
+                  8,
+                  1,
+                  28,
+                ],
                 "circle-color": "#8B5CF6",
                 "circle-stroke-color": "#ffffff",
                 "circle-stroke-width": 1.5,
@@ -767,7 +853,51 @@ export function MapComponent({
             />
           </Source>
         )}
+
+        {/* EV Hubs — render only in EVHubs view (or when ev-hubs layer is active) */}
+        {(mapMode === "EVHubs" || activeLayers?.has?.("ev-hubs")) &&
+          evHubs &&
+          evHubs.length > 0 && (
+            <Source
+              id="ev-hubs"
+              type="geojson"
+              data={{
+                type: "FeatureCollection",
+                features: evHubs.map((hub) => ({
+                  type: "Feature",
+                  geometry: hub.location,
+                  properties: { ...hub, id: hub.id },
+                })),
+              }}
+            >
+              <Layer
+                id="ev-hub-circles"
+                type="circle"
+                source="ev-hubs"
+                paint={{
+                  "circle-radius": 10,
+                  "circle-color": "#10B981",
+                  "circle-stroke-width": 1,
+                  "circle-stroke-color": "#fff",
+                }}
+              />
+              <Layer
+                id="ev-hub-points"
+                type="symbol"
+                source="ev-hubs"
+                layout={{
+                  "icon-image": "charging-station-15",
+                  "icon-size": 1.4,
+                  "icon-allow-overlap": true,
+                  "icon-anchor": "bottom",
+                }}
+              />
+            </Source>
+          )}
       </Map>
     </div>
   );
 }
+
+// also provide the default export so both import styles work
+export default MapComponent;
