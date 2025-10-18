@@ -54,6 +54,9 @@ type MapComponentProps = {
   mapMode?: "Live" | "Events" | "Mood" | "EVHubs";
   onFeatureClick: (feature: any) => void;
   onMapLoad: (map: MapRef) => void;
+  communityFeatures?: GeoJSON.FeatureCollection | null;
+  onCommunityClick?: (props: any) => void;
+  parentMapRef?: React.RefObject<MapRef>;
 };
 
 const severityColorMap = {
@@ -100,6 +103,9 @@ export function MapComponent({
   onFeatureClick,
   onMapLoad,
   mapMode,
+  communityFeatures,
+  onCommunityClick,
+  parentMapRef,
 }: MapComponentProps) {
   const mapRef = React.useRef<MapRef>(null);
   const router = useRouter();
@@ -456,6 +462,13 @@ export function MapComponent({
     const map = mapRef.current?.getMap();
     if (map) {
       onMapLoad(mapRef.current!);
+      // if parent passed a ref, assign it so parent can access the map ref
+      if (parentMapRef && typeof parentMapRef === "object") {
+        try {
+          // @ts-ignore - assign the internal ref to the parent's ref object
+          parentMapRef.current = mapRef.current;
+        } catch {}
+      }
       console.log("Map reference passed to parent");
 
       // Initial map setup is now handled by the mapMode effect
@@ -467,6 +480,9 @@ export function MapComponent({
   const showTrafficLayer = activeLayers.has("traffic") && mapMode === "Live";
   const showEventsLayer = activeLayers.has("events") && mapMode === "Events";
   const hasValidPolygons = areaMoodsGeoJSON.features.length > 0;
+
+  const showCommunityLayer =
+    mapMode === "Community" && !!communityFeatures?.features?.length;
 
   // Ensure ev-hubs source/layers are added only in EVHubs view and removed otherwise.
   React.useEffect(() => {
@@ -562,6 +578,97 @@ export function MapComponent({
     };
   }, [mapMode, activeLayers, evHubs, mapRef]);
 
+  // programmatically add / remove community polygon source + layers and click handler
+  React.useEffect(() => {
+    const m = mapRef?.current?.getMap?.();
+    if (!m) return;
+    // Only show community polygons in the Community view
+    if (mapMode !== "Community") {
+      try {
+        if (m.getLayer("community-line")) m.removeLayer("community-line");
+        if (m.getLayer("community-fill")) m.removeLayer("community-fill");
+        if (m.getSource("community-reports"))
+          m.removeSource("community-reports");
+      } catch {}
+      return;
+    }
+    const sourceId = "community-reports";
+    const fillLayerId = "community-fill";
+    const lineLayerId = "community-line";
+
+    // remove existing first to avoid duplicates
+    try {
+      if (m.getLayer(lineLayerId)) m.removeLayer(lineLayerId);
+      if (m.getLayer(fillLayerId)) m.removeLayer(fillLayerId);
+      if (m.getSource(sourceId)) m.removeSource(sourceId);
+    } catch {}
+
+    if (!communityFeatures || !communityFeatures.features?.length) return;
+
+    m.addSource(sourceId, { type: "geojson", data: communityFeatures });
+
+    m.addLayer({
+      id: fillLayerId,
+      type: "fill",
+      source: sourceId,
+      paint: {
+        "fill-color": "#F97316",
+        "fill-opacity": 0.18,
+      },
+    });
+
+    m.addLayer({
+      id: lineLayerId,
+      type: "line",
+      source: sourceId,
+      paint: {
+        "line-color": "#F97316",
+        "line-width": 2,
+      },
+    });
+
+    // click handler for community polygons
+    const onCommunityLayerClick = (e: any) => {
+      const features = e.features || (e && e.features) || [];
+      if (!features || features.length === 0) return;
+      const feat = features[0];
+      const props = feat.properties || {};
+      const parsed: any = {};
+      Object.keys(props).forEach((k) => {
+        try {
+          parsed[k] = JSON.parse(props[k]);
+        } catch {
+          parsed[k] = props[k];
+        }
+      });
+      // include geometry coords if available
+      parsed._geometry = feat.geometry;
+      onCommunityClick?.(parsed);
+    };
+
+    // register click listener on the fill layer
+    m.on("click", fillLayerId, onCommunityLayerClick);
+
+    // cursor style
+    m.on("mouseenter", fillLayerId, () => {
+      m.getCanvas().style.cursor = "pointer";
+    });
+    m.on("mouseleave", fillLayerId, () => {
+      m.getCanvas().style.cursor = "";
+    });
+
+    return () => {
+      try {
+        m.off("click", fillLayerId, onCommunityLayerClick);
+        m.off("mouseenter", fillLayerId, () => {});
+        m.off("mouseleave", fillLayerId, () => {});
+        if (m.getLayer(lineLayerId)) m.removeLayer(lineLayerId);
+        if (m.getLayer(fillLayerId)) m.removeLayer(fillLayerId);
+        if (m.getSource(sourceId)) m.removeSource(sourceId);
+      } catch {}
+    };
+  }, [communityFeatures, mapRef, onCommunityClick, mapMode]);
+
   return (
     <div className="relative w-full h-full">
       <Map
@@ -581,6 +688,7 @@ export function MapComponent({
           "evhub-points",
           "evhub-circle",
           ...(showSentimentLayer ? ["area-moods-fill"] : []),
+          ...(showCommunityLayer ? ["community-fill"] : []),
         ]}
         onClick={handleFeatureClick}
         onLoad={onInternalLoad}

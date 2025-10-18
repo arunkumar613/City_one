@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import type { MapRef } from "react-map-gl";
+import { createClient } from "@supabase/supabase-js";
 
 import { MapComponent } from "./map-component";
 import { IncidentSheet } from "./incident-sheet";
@@ -49,6 +50,7 @@ import {
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ChatBot from "./chatbot";
+import CommunityHelp from "./community-help";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -61,7 +63,8 @@ const ALL_LAYERS: MapLayer[] = [
   { id: "sentiment", name: "Sentiment" },
 ];
 
-type MapMode = "Live" | "Events" | "Mood" | "EVHubs"; // <-- Add EVHubs
+// add Community to MapMode
+type MapMode = "Live" | "Events" | "Mood" | "EVHubs" | "Community";
 
 const SEVERITIES: Severity[] = ["Info", "Minor", "Major", "Critical"];
 
@@ -215,6 +218,94 @@ export function MapDashboard() {
     };
   }, []);
 
+  // Community reports (fetched from Supabase)
+  const [communityFeatures, setCommunityFeatures] =
+    React.useState<GeoJSON.FeatureCollection | null>(null);
+  const [selectedCommunity, setSelectedCommunity] = React.useState<any | null>(
+    null
+  );
+  const [communityLoading, setCommunityLoading] = React.useState(false);
+
+  // helper: approximate circle polygon around a lat/lng (meters -> degrees)
+  function createCirclePolygon(lat: number, lng: number, radiusMeters = 150) {
+    const points: [number, number][] = [];
+    const steps = 24;
+    const earthCircumference = 40075000; // meters
+    const latDegreeMeters = 111320; // approx
+    for (let i = 0; i < steps; i++) {
+      const ang = (i / steps) * Math.PI * 2;
+      const dLat = (radiusMeters * Math.cos(ang)) / latDegreeMeters;
+      const dLng =
+        (radiusMeters * Math.sin(ang)) /
+        (latDegreeMeters * Math.cos((lat * Math.PI) / 180));
+      points.push([lng + dLng, lat + dLat]);
+    }
+    // close polygon
+    points.push(points[0]);
+    return points;
+  }
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseKey) {
+      console.warn("Supabase client env not set. Skipping community fetch.");
+      return;
+    }
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    async function fetchCommunity() {
+      try {
+        const { data, error } = await supabase
+          .from("city-one-community")
+          .select("id,created_at,title,description,area,response,lat,lng");
+
+        // log raw rows for debugging
+        console.log("Supabase community rows:", data, "error:", error);
+
+        if (error) {
+          console.error("Supabase community fetch error", error);
+          return;
+        }
+        if (cancelled) return;
+        // build GeoJSON FeatureCollection of polygons (small circles) from lat/lng
+        const features = (data || [])
+          .filter((r: any) => r.lat != null && r.lng != null)
+          .map((r: any) => {
+            const lat = Number(r.lat);
+            const lng = Number(r.lng);
+            const polygon = createCirclePolygon(lat, lng, 100); // 100m radius
+            return {
+              type: "Feature",
+              geometry: { type: "Polygon", coordinates: [polygon] },
+              properties: {
+                id: r.id,
+                title: r.title,
+                description: r.description,
+                area: r.area,
+                response: r.response,
+                created_at: r.created_at,
+                lat,
+                lng,
+              },
+            };
+          });
+        setCommunityFeatures({
+          type: "FeatureCollection",
+          features,
+        });
+      } catch (err) {
+        console.error("Failed to fetch community data", err);
+      }
+    }
+
+    fetchCommunity();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Handlers
   const handleFeatureClick = React.useCallback((feature: any) => {
     if (feature.score) return; // Don't open sheet for sentiment polygons
@@ -324,8 +415,12 @@ export function MapDashboard() {
             sentiment={getAllData().sentiment}
             areaMoods={displayAreaMoods}
             activeLayers={activeLayers}
+            communityFeatures={communityFeatures}
             onFeatureClick={handleFeatureClick}
             onMapLoad={handleMapLoad}
+            onCommunityClick={(f: any) => {
+              setSelectedCommunity(f);
+            }}
             mapMode={mapMode}
           />
         )}
@@ -413,6 +508,15 @@ export function MapDashboard() {
                                 data-[state=off]:text-muted-foreground hover:text-primary-foreground"
               >
                 EV Hubs
+              </ToggleGroupItem>
+
+              <ToggleGroupItem
+                value="Community"
+                className="relative px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
+                                data-[state=on]:bg-primary/20 data-[state=on]:text-primary-foreground data-[state=on]:shadow-inner
+                                data-[state=off]:text-muted-foreground hover:text-primary-foreground"
+              >
+                Community
               </ToggleGroupItem>
             </ToggleGroup>
             <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent opacity-50"></div>
@@ -572,6 +676,116 @@ export function MapDashboard() {
 
         {/* ensure chat is mounted in all views */}
         <ChatBot />
+
+        {/* show inline community help panel when community mode is active */}
+        {mapMode === "Community" && (
+          <CommunityHelp
+            mapRef={mapRef}
+            open={true}
+            onClose={() => setMapMode("Live")}
+            inline
+          />
+        )}
+
+        {/* COMMUNITY: bottom-right/side list of reports (visible in Community mode) */}
+        {mapMode === "Community" && (
+          <div className="fixed left-4 top-20 z-30 bg-card/90 backdrop-blur-sm p-3 rounded-lg border border-border/60 shadow-md w-80 max-h-[calc(100vh-160px)] overflow-hidden">
+            <h5 className="text-sm font-medium mb-2">Community Requests</h5>
+
+            <div className="overflow-y-auto max-h-[calc(100vh-220px)] space-y-2">
+              {communityLoading ? (
+                <div className="text-xs text-muted-foreground">Loading...</div>
+              ) : !communityFeatures ||
+                communityFeatures.features.length === 0 ? (
+                <div className="text-xs text-muted-foreground">No requests</div>
+              ) : (
+                communityFeatures.features.map((f: any) => {
+                  const p = f.properties || {};
+                  return (
+                    <div
+                      key={p.id ?? JSON.stringify(p)}
+                      className="p-2 border border-border/10 rounded-md hover:bg-accent/5 cursor-pointer"
+                      onClick={() => {
+                        setSelectedCommunity(p);
+                        // fly to the report on the map if mapRef available
+                        try {
+                          const m =
+                            mapRef?.getMap?.() ||
+                            (mapRef as any)?.current?.getMap?.();
+                          if (m && p.lng != null && p.lat != null) {
+                            m.flyTo({
+                              center: [Number(p.lng), Number(p.lat)],
+                              zoom: 15,
+                              essential: true,
+                            });
+                          }
+                        } catch (e) {
+                          console.warn("FlyTo failed", e);
+                        }
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="font-medium text-sm">
+                            {p.title ?? "Untitled"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {p.area ?? ""}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                            {p.description}
+                          </div>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {p.created_at
+                            ? new Date(p.created_at).toLocaleString()
+                            : ""}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Sidebar: details shown when a community polygon / item is selected */}
+        {selectedCommunity && (
+          <div className="fixed left-96 top-20 z-40 bg-card/95 backdrop-blur-sm p-4 rounded-lg border border-border/60 shadow-md w-80 max-h-[calc(100vh-160px)] overflow-auto">
+            <div className="flex justify-between items-start">
+              <div>
+                <h4 className="font-semibold text-lg">
+                  {selectedCommunity.title}
+                </h4>
+                <div className="text-xs text-muted-foreground">
+                  {selectedCommunity.area}
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedCommunity(null)}
+                className="text-sm text-muted-foreground"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-3 text-sm">
+              <div className="text-xs text-muted-foreground">Description</div>
+              <div className="mt-1">{selectedCommunity.description}</div>
+
+              <div className="mt-3 text-xs text-muted-foreground">Response</div>
+              <div className="mt-1">{selectedCommunity.response ?? "—"}</div>
+
+              <div className="mt-3 text-xs text-muted-foreground">Reported</div>
+              <div className="mt-1">
+                {selectedCommunity.created_at
+                  ? new Date(selectedCommunity.created_at).toLocaleString()
+                  : "—"}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </TooltipProvider>
   );
