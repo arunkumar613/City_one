@@ -7,77 +7,46 @@ _An intelligent real-time urban insight platform powered by AI and automation._
 
 ## Overview
 
-City One is an AI-driven urban intelligence platform that provides citizens with a live, actionable, and predictive view of their city.  
-It integrates data from multiple real-time sources such as traffic APIs, social media sentiment, EV hub status, and community reports to present unified insights that improve navigation, decision-making, and civic engagement.
+City One is an AI-powered urban intelligence platform that provides citizens with a live, unified, and predictive view of their city.  
+It aggregates data from traffic APIs, social media sentiment, EV hub status, and community reports to deliver actionable insights that enhance mobility, awareness, and civic engagement.
 
 ---
 
 ## Problem Statement
 
-Modern cities generate massive amounts of data from sensors, social media, and citizen inputs, but this information is fragmented, redundant, and often difficult to interpret.  
-City One solves this by unifying data from diverse sources, reducing noise through clustering and NLP, and providing a single platform for real-time, predictive urban insights.
+Urban data is vast yet fragmented—spread across sensors, social media, and civic platforms—making it difficult for citizens to act on.  
+City One integrates and filters this data through AI-based clustering and NLP, presenting real-time, reliable, and predictive insights in one interactive dashboard.
 
 ---
 
 ## Key Features
 
-**Live Traffic Insights**  
-- Displays real-time traffic conditions using live data APIs.  
-- Interactive map visualization showing congestion levels.  
-- Chatbot explanations for unusual traffic patterns.
-
-**Live City Sentiment**  
-- Fetches social media posts via n8n workflows.  
-- Analyzes public sentiment using Gemini AI.  
-- Displays city mood as polygon overlays on the map.
-
-**EV Hub Status**  
-- Shows live status of EV charging hubs across India.  
-- Data dynamically updates through automated backend workflows.
-
-**AI Chatbot (CityPulse AI)**  
-- Built using n8n Webhooks and Gemini AI.  
-- Responds to user queries based on real-time database insights.
-
-**Community Help & Issue Reporting**  
-- Allows citizens to submit local complaints.  
-- Stores issues in Supabase with location and description.  
-- Automatically generates acknowledgment messages using Gemini AI.
-
-**Events Around India**  
-- Displays ongoing and upcoming city events.  
-- Helps users plan based on event density and sentiment in that area.
+- **Real-Time Traffic Insights:** Visualizes congestion using live data and provides chatbot explanations for anomalies.  
+- **City Sentiment Analysis:** Fetches social media data via n8n, processes it with Gemini AI, and displays sentiment heatmaps.  
+- **EV Hub Monitoring:** Shows live EV charging station statuses across India.  
+- **AI Chatbot (CityPulse AI):** Answers user queries using n8n Webhooks and Gemini AI.  
+- **Community Help Reports:** Enables users to raise local issues, automatically acknowledged via AI-generated messages.  
+- **Event Insights:** Displays live and upcoming events with sentiment-based crowd insights.
 
 ---
 
 ## Tech Stack
 
-| Component | Technology |
-|------------|-------------|
+| Layer | Technology |
+|--------|-------------|
 | Frontend | Next.js + Mapbox GL JS |
-| Backend Automation | n8n Workflows |
+| Backend | n8n Workflows |
 | Database | Supabase |
-| Sentiment Analysis | Gemini AI + NLP classification |
-| Hosting | Supabase (DB) + Vercel/Netlify (Frontend) |
+| AI/ML | Gemini AI + NLP |
+| Hosting | Vercel / Netlify |
 
 ---
 
 ## System Workflow
 
-**1. Social Media Sentiment Flow**  
-- n8n fetches posts from Reddit/Twitter.  
-- Gemini AI classifies sentiment.  
-- Results stored in Supabase and visualized on the map.
-
-**2. Chatbot Flow**  
-- User query triggers n8n Webhook.  
-- Gemini AI processes the query using database data.  
-- Response returned to frontend chatbot.
-
-**3. Community Help Flow**  
-- User submits a report.  
-- Data stored in Supabase.  
-- Auto-response generated using Gemini AI.
+1. **Social Media Sentiment Flow:** n8n fetches Reddit/Twitter data → Gemini AI classifies sentiment → Stored in Supabase → Visualized as polygons on the map.  
+2. **Chatbot Flow:** User query → n8n Webhook → Gemini AI response → Displayed in chat interface.  
+3. **Community Help Flow:** User submits issue → Stored in Supabase → AI auto-response sent.
 
 ---
 
@@ -86,21 +55,43 @@ City One solves this by unifying data from diverse sources, reducing noise throu
 | Name | Role | Contribution |
 |------|------|---------------|
 | Lakshwin Krishna Reddy M | AI & Backend Automation | n8n workflows, Gemini integration, Supabase schema |
-| Mohamed Saif MS | Frontend Developer | Next.js + Mapbox dashboard, data visualization |
-| Prathik E | Data Engineer | API integration, data cleaning, traffic data pipeline |
-| Arunkumar P | UI/UX Designer | Dashboard design, user experience flow |
+| Mohamed Saif MS | Frontend Developer | Next.js + Mapbox dashboard, visualization |
+| Prathik E | Data Engineer | API integration, traffic data ingestion |
+| Arunkumar P | UI/UX Designer | Dashboard layout, user experience |
 
 ---
 
 ## Future Scope
-- Integrate real-time crowd density estimation using image data.  
-- Implement adaptive traffic signal control based on congestion.  
-- Add predictive event analytics using LLMs.  
-- Develop a mobile application version for accessibility.
+- Real-time crowd estimation via image analysis.  
+- Adaptive traffic signal recommendations.  
+- Event prediction using LLMs.  
+- Cross-platform mobile version.
+
+---
+
+---
+
+## 📸 Project Snapshots
+
+###  Dashboard Overview
+![City One Dashboard](./CO_OUT-2.png)
+
+### 💬 Live City Sentiment
+![City Sentiment Analysis](./CO_OUT-3.png)
+
+### ⚡ EV Hub Status
+![EV Hubs](./CO_OUT-4.png)
+
+### 🧭 Community Reports
+![Community Reports](./CO_OUT-5.png)
+
+### ⚙️ n8n Automation Flow
+![n8n Workflow](./CO_OUT-1.png)
+
 
 ---
 
 ## Conclusion
 
-City One unifies AI, automation, and citizen collaboration into a single intelligent city platform.  
-It enhances situational awareness, improves mobility, and empowers citizens with real-time, data-driven insights for better urban living.
+City One combines AI, automation, and citizen collaboration to create a responsive, intelligent city platform.  
+It empowers users to navigate urban life smarter—turning complex city data into clear, real-time insights.
