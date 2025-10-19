@@ -54,11 +54,10 @@ City One integrates and filters this data through AI-based clustering and NLP, p
 
 | Name | Role | Contribution |
 |------|------|---------------|
-| Lakshwin Krishna Reddy M | AI & Backend Automation | n8n workflows, Gemini integration, Supabase schema |
 | Mohamed Saif MS | Frontend Developer | Next.js + Mapbox dashboard, visualization |
 | Prathik E | Data Engineer | API integration, traffic data ingestion |
-| Arunkumar P | UI/UX Designer | Dashboard layout, user experience |
-
+| Arunkumar P | UI/UX Designer, Data Engineer | Supabase schema, Dashboard layout, user experience |
+| Lakshwin Krishna Reddy M | AI & Backend Automation | n8n workflows |
 ---
 
 ## Future Scope
@@ -71,21 +70,21 @@ City One integrates and filters this data through AI-based clustering and NLP, p
 
 ---
 
-## 📸 Project Snapshots
+##  Project Snapshots
 
 ###  Dashboard Overview
 ![City One Dashboard](./CO_OUT-2.png)
 
-### 💬 Live City Sentiment
+###  Live City Sentiment
 ![City Sentiment Analysis](./CO_OUT-3.png)
 
-### ⚡ EV Hub Status
+###  EV Hub Status
 ![EV Hubs](./CO_OUT-4.png)
 
-### 🧭 Community Reports
+###  Community Reports
 ![Community Reports](./CO_OUT-5.png)
 
-### ⚙️ n8n Automation Flow
+###  n8n Automation Flow
 ![n8n Workflow](./CO_OUT-1.png)
 
 
